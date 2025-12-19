@@ -1,0 +1,330 @@
+<!-- Human capsule collision fragment -->
+<body name="human_root" mocap="true">
+  <body name="J0" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J1" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J2" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J3" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J4" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J5" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J6" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J7" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J8" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J9" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J10" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J11" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J12" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J13" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J14" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J15" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J16" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J17" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J18" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J19" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J20" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J21" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J22" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J23" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J24" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J25" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J26" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J27" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J28" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J29" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J30" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J31" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J32" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J33" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J34" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J35" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J36" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J37" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J38" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J39" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J40" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J41" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J42" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J43" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J44" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J45" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J46" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J47" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J48" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J49" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J50" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J51" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J52" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J53" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="J54" mocap="true">
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+  </body>
+  <body name="B0" mocap="true">
+    <geom name="bone0" type="capsule" size="0.035000 0.054762" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B1" mocap="true">
+    <geom name="bone1" type="capsule" size="0.035000 0.059721" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B2" mocap="true">
+    <geom name="bone2" type="capsule" size="0.035000 0.056054" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B3" mocap="true">
+    <geom name="bone3" type="capsule" size="0.035000 0.196672" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B4" mocap="true">
+    <geom name="bone4" type="capsule" size="0.035000 0.189693" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B5" mocap="true">
+    <geom name="bone5" type="capsule" size="0.035000 0.082410" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B6" mocap="true">
+    <geom name="bone6" type="capsule" size="0.035000 0.204836" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B7" mocap="true">
+    <geom name="bone7" type="capsule" size="0.035000 0.207934" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B8" mocap="true">
+    <geom name="bone8" type="capsule" size="0.035000 0.031222" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B9" mocap="true">
+    <geom name="bone9" type="capsule" size="0.035000 0.076836" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B10" mocap="true">
+    <geom name="bone10" type="capsule" size="0.035000 0.077804" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B11" mocap="true">
+    <geom name="bone11" type="capsule" size="0.035000 0.081407" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B12" mocap="true">
+    <geom name="bone12" type="capsule" size="0.035000 0.043647" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B13" mocap="true">
+    <geom name="bone13" type="capsule" size="0.035000 0.042843" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B14" mocap="true">
+    <geom name="bone14" type="capsule" size="0.035000 0.084419" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B15" mocap="true">
+    <geom name="bone15" type="capsule" size="0.035000 0.073494" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B16" mocap="true">
+    <geom name="bone16" type="capsule" size="0.035000 0.066668" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B17" mocap="true">
+    <geom name="bone17" type="capsule" size="0.035000 0.130816" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B18" mocap="true">
+    <geom name="bone18" type="capsule" size="0.035000 0.136600" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B19" mocap="true">
+    <geom name="bone19" type="capsule" size="0.035000 0.131932" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B20" mocap="true">
+    <geom name="bone20" type="capsule" size="0.035000 0.127718" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B21" mocap="true">
+    <geom name="bone21" type="capsule" size="0.035000 0.009637" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B22" mocap="true">
+    <geom name="bone22" type="capsule" size="0.035000 0.037315" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B23" mocap="true">
+    <geom name="bone23" type="capsule" size="0.035000 0.042122" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B24" mocap="true">
+    <geom name="bone24" type="capsule" size="0.035000 0.052711" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B25" mocap="true">
+    <geom name="bone25" type="capsule" size="0.035000 0.016511" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B26" mocap="true">
+    <geom name="bone26" type="capsule" size="0.035000 0.011694" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B27" mocap="true">
+    <geom name="bone27" type="capsule" size="0.035000 0.056226" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B28" mocap="true">
+    <geom name="bone28" type="capsule" size="0.035000 0.015899" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B29" mocap="true">
+    <geom name="bone29" type="capsule" size="0.035000 0.012256" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B30" mocap="true">
+    <geom name="bone30" type="capsule" size="0.035000 0.049785" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B31" mocap="true">
+    <geom name="bone31" type="capsule" size="0.035000 0.010143" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B32" mocap="true">
+    <geom name="bone32" type="capsule" size="0.035000 0.009933" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B33" mocap="true">
+    <geom name="bone33" type="capsule" size="0.035000 0.052607" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B34" mocap="true">
+    <geom name="bone34" type="capsule" size="0.035000 0.014805" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B35" mocap="true">
+    <geom name="bone35" type="capsule" size="0.035000 0.012521" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B36" mocap="true">
+    <geom name="bone36" type="capsule" size="0.035000 0.025629" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B37" mocap="true">
+    <geom name="bone37" type="capsule" size="0.035000 0.015647" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B38" mocap="true">
+    <geom name="bone38" type="capsule" size="0.035000 0.013725" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B39" mocap="true">
+    <geom name="bone39" type="capsule" size="0.035000 0.052131" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B40" mocap="true">
+    <geom name="bone40" type="capsule" size="0.035000 0.016721" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B41" mocap="true">
+    <geom name="bone41" type="capsule" size="0.035000 0.011722" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B42" mocap="true">
+    <geom name="bone42" type="capsule" size="0.035000 0.055564" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B43" mocap="true">
+    <geom name="bone43" type="capsule" size="0.035000 0.015902" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B44" mocap="true">
+    <geom name="bone44" type="capsule" size="0.035000 0.012370" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B45" mocap="true">
+    <geom name="bone45" type="capsule" size="0.035000 0.049784" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B46" mocap="true">
+    <geom name="bone46" type="capsule" size="0.035000 0.010187" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B47" mocap="true">
+    <geom name="bone47" type="capsule" size="0.035000 0.010006" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B48" mocap="true">
+    <geom name="bone48" type="capsule" size="0.035000 0.052245" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B49" mocap="true">
+    <geom name="bone49" type="capsule" size="0.035000 0.014680" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B50" mocap="true">
+    <geom name="bone50" type="capsule" size="0.035000 0.012395" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B51" mocap="true">
+    <geom name="bone51" type="capsule" size="0.035000 0.025929" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B52" mocap="true">
+    <geom name="bone52" type="capsule" size="0.035000 0.015621" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+  <body name="B53" mocap="true">
+    <geom name="bone53" type="capsule" size="0.035000 0.013594" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+  </body>
+</body>

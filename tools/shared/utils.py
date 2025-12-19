@@ -4,6 +4,16 @@ from pathlib import Path
 from typing import Type, Union, Callable, Optional
 
 from bigym.bigym_env import BiGymEnv
+from bigym.envs.cupboards_with_human import (
+    HumanDrawerTopOpen,
+    HumanDrawerTopClose,
+    HumanDrawersAllOpen,
+    HumanDrawersAllClose,
+    HumanCupboardsCloseAll,
+    HumanCupboardsOpenAll,
+    HumanWallCupboardOpen,
+    HumanWallCupboardClose,
+)
 from bigym.envs.cupboards import (
     DrawerTopOpen,
     DrawerTopClose,
@@ -116,6 +126,14 @@ ENVIRONMENTS: dict[str, Type[BiGymEnv]] = {
     "Remove Sandwich": RemoveSandwich,
     "Groceries Store Lower": GroceriesStoreLower,
     "Groceries Store Upper": GroceriesStoreUpper,
+    "Human Cupboards Drawer Top Open": HumanDrawerTopOpen,
+    "Human Cupboards Drawer Top Close": HumanDrawerTopClose,
+    "Human Cupboards Drawers All Open": HumanDrawersAllOpen,
+    "Human Cupboards Drawers All Close": HumanDrawersAllClose,
+    "Human Cupboards Wall Cupboard Open": HumanWallCupboardOpen,
+    "Human Cupboards Wall Cupboard  Close": HumanWallCupboardClose,
+    "Human Cupboards Cupboards Open All": HumanCupboardsOpenAll,
+    "Human Cupboards Cupboards Close All": HumanCupboardsCloseAll,
 }
 
 ROBOTS: dict[str, Optional[Type[Robot]]] = {

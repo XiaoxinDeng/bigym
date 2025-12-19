@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from enum import Enum, IntEnum
 from pathlib import Path
-
+import os
 import numpy as np
 
 PACKAGE_PATH = Path(__file__).parent
 ASSETS_PATH = PACKAGE_PATH / "envs" / "xmls"
 PRESETS_PATH = PACKAGE_PATH / "envs" / "presets"
-CACHE_PATH = Path.home() / ".bigym"
+CACHE_PATH = Path(os.environ.get("BIGYM_CACHE_PATH") or Path.home() / ".bigym")
 
 DEMO_RELEASES = "https://github.com/chernyadev/bigym_data/releases/download"
 DEMO_VERSION = "0.9.0"

@@ -2,7 +2,7 @@
 import numpy as np
 
 from bigym.action_modes import TorqueActionMode
-from bigym.envs.cupboards_with_human import HumanCupboardsOpenAll
+from bigym.envs.reach_target import ReachTarget
 from bigym.utils.observation_config import ObservationConfig, CameraConfig
 
 try:
@@ -16,7 +16,7 @@ except ImportError:
 
 
 print("Running 1000 steps with pixels...")
-env = HumanCupboardsOpenAll(
+env = ReachTarget(
     action_mode=TorqueActionMode(floating_base=True),
     observation_config=ObservationConfig(
         cameras=[
