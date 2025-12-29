@@ -1,0 +1,385 @@
+<!-- Articulated human fragment -->
+<body name="human_root">
+  <body name="J0">
+    <freejoint name="root_free"/>
+    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+    <body name="L1">
+      <joint name="joint_1" type="ball" damping="0.5"/>
+      <geom name="bone1" type="capsule" size="0.035000 0.054762" fromto="0 0 0  0 0 0.109523" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+      <body name="J1" pos="0 0 0.109523">
+        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+        <body name="L4">
+          <joint name="joint_4" type="ball" damping="0.5"/>
+          <geom name="bone4" type="capsule" size="0.035000 0.196672" fromto="0 0 0  0 0 0.393344" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+          <body name="J4" pos="0 0 0.393344">
+            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+            <body name="L7">
+              <joint name="joint_7" type="ball" damping="0.5"/>
+              <geom name="bone7" type="capsule" size="0.035000 0.204836" fromto="0 0 0  0 0 0.409673" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+              <body name="J7" pos="0 0 0.409673">
+                <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                <body name="L10">
+                  <joint name="joint_10" type="ball" damping="0.5"/>
+                  <geom name="bone10" type="capsule" size="0.035000 0.076836" fromto="0 0 0  0 0 0.153671" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                  <body name="J10" pos="0 0 0.153671">
+                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="L2">
+      <joint name="joint_2" type="ball" damping="0.5"/>
+      <geom name="bone2" type="capsule" size="0.035000 0.059721" fromto="0 0 0  0 0 0.119443" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+      <body name="J2" pos="0 0 0.119443">
+        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+        <body name="L5">
+          <joint name="joint_5" type="ball" damping="0.5"/>
+          <geom name="bone5" type="capsule" size="0.035000 0.189693" fromto="0 0 0  0 0 0.379385" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+          <body name="J5" pos="0 0 0.379385">
+            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+            <body name="L8">
+              <joint name="joint_8" type="ball" damping="0.5"/>
+              <geom name="bone8" type="capsule" size="0.035000 0.207934" fromto="0 0 0  0 0 0.415868" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+              <body name="J8" pos="0 0 0.415868">
+                <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                <body name="L11">
+                  <joint name="joint_11" type="ball" damping="0.5"/>
+                  <geom name="bone11" type="capsule" size="0.035000 0.077804" fromto="0 0 0  0 0 0.155607" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                  <body name="J11" pos="0 0 0.155607">
+                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="L3">
+      <joint name="joint_3" type="ball" damping="0.5"/>
+      <geom name="bone3" type="capsule" size="0.035000 0.056054" fromto="0 0 0  0 0 0.112109" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+      <body name="J3" pos="0 0 0.112109">
+        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+        <body name="L6">
+          <joint name="joint_6" type="ball" damping="0.5"/>
+          <geom name="bone6" type="capsule" size="0.035000 0.082410" fromto="0 0 0  0 0 0.164820" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+          <body name="J6" pos="0 0 0.164820">
+            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+            <body name="L9">
+              <joint name="joint_9" type="ball" damping="0.5"/>
+              <geom name="bone9" type="capsule" size="0.035000 0.031222" fromto="0 0 0  0 0 0.062444" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+              <body name="J9" pos="0 0 0.062444">
+                <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                <body name="L12">
+                  <joint name="joint_12" type="ball" damping="0.5"/>
+                  <geom name="bone12" type="capsule" size="0.035000 0.081407" fromto="0 0 0  0 0 0.162813" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                  <body name="J12" pos="0 0 0.162813">
+                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                    <body name="L15">
+                      <joint name="joint_15" type="ball" damping="0.5"/>
+                      <geom name="bone15" type="capsule" size="0.035000 0.084414" fromto="0 0 0  0 0 0.168828" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                      <body name="J15" pos="0 0 0.168828">
+                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                        <body name="L22">
+                          <joint name="joint_22" type="ball" damping="0.5"/>
+                          <geom name="bone22" type="capsule" size="0.035000 0.009640" fromto="0 0 0  0 0 0.019280" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                          <body name="J22" pos="0 0 0.019280">
+                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                          </body>
+                        </body>
+                        <body name="L23">
+                          <joint name="joint_23" type="ball" damping="0.5"/>
+                          <geom name="bone23" type="capsule" size="0.035000 0.037323" fromto="0 0 0  0 0 0.074646" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                          <body name="J23" pos="0 0 0.074646">
+                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                          </body>
+                        </body>
+                        <body name="L24">
+                          <joint name="joint_24" type="ball" damping="0.5"/>
+                          <geom name="bone24" type="capsule" size="0.035000 0.042130" fromto="0 0 0  0 0 0.084261" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                          <body name="J24" pos="0 0 0.084261">
+                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                          </body>
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+                <body name="L13">
+                  <joint name="joint_13" type="ball" damping="0.5"/>
+                  <geom name="bone13" type="capsule" size="0.035000 0.043647" fromto="0 0 0  0 0 0.087294" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                  <body name="J13" pos="0 0 0.087294">
+                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                    <body name="L16">
+                      <joint name="joint_16" type="ball" damping="0.5"/>
+                      <geom name="bone16" type="capsule" size="0.035000 0.073494" fromto="0 0 0  0 0 0.146989" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                      <body name="J16" pos="0 0 0.146989">
+                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                        <body name="L18">
+                          <joint name="joint_18" type="ball" damping="0.5"/>
+                          <geom name="bone18" type="capsule" size="0.035000 0.130816" fromto="0 0 0  0 0 0.261632" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                          <body name="J18" pos="0 0 0.261632">
+                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                            <body name="L20">
+                              <joint name="joint_20" type="ball" damping="0.5"/>
+                              <geom name="bone20" type="capsule" size="0.035000 0.131932" fromto="0 0 0  0 0 0.263865" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                              <body name="J20" pos="0 0 0.263865">
+                                <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                <body name="L25">
+                                  <joint name="joint_25" type="ball" damping="0.5"/>
+                                  <geom name="bone25" type="capsule" size="0.035000 0.052711" fromto="0 0 0  0 0 0.105423" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J25" pos="0 0 0.105423">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L26">
+                                      <joint name="joint_26" type="ball" damping="0.5"/>
+                                      <geom name="bone26" type="capsule" size="0.035000 0.016511" fromto="0 0 0  0 0 0.033023" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J26" pos="0 0 0.033023">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L27">
+                                          <joint name="joint_27" type="ball" damping="0.5"/>
+                                          <geom name="bone27" type="capsule" size="0.035000 0.011694" fromto="0 0 0  0 0 0.023388" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J27" pos="0 0 0.023388">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                                <body name="L28">
+                                  <joint name="joint_28" type="ball" damping="0.5"/>
+                                  <geom name="bone28" type="capsule" size="0.035000 0.056226" fromto="0 0 0  0 0 0.112451" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J28" pos="0 0 0.112451">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L29">
+                                      <joint name="joint_29" type="ball" damping="0.5"/>
+                                      <geom name="bone29" type="capsule" size="0.035000 0.015899" fromto="0 0 0  0 0 0.031797" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J29" pos="0 0 0.031797">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L30">
+                                          <joint name="joint_30" type="ball" damping="0.5"/>
+                                          <geom name="bone30" type="capsule" size="0.035000 0.012256" fromto="0 0 0  0 0 0.024512" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J30" pos="0 0 0.024512">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                                <body name="L31">
+                                  <joint name="joint_31" type="ball" damping="0.5"/>
+                                  <geom name="bone31" type="capsule" size="0.035000 0.049785" fromto="0 0 0  0 0 0.099569" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J31" pos="0 0 0.099569">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L32">
+                                      <joint name="joint_32" type="ball" damping="0.5"/>
+                                      <geom name="bone32" type="capsule" size="0.035000 0.010143" fromto="0 0 0  0 0 0.020287" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J32" pos="0 0 0.020287">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L33">
+                                          <joint name="joint_33" type="ball" damping="0.5"/>
+                                          <geom name="bone33" type="capsule" size="0.035000 0.009933" fromto="0 0 0  0 0 0.019867" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J33" pos="0 0 0.019867">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                                <body name="L34">
+                                  <joint name="joint_34" type="ball" damping="0.5"/>
+                                  <geom name="bone34" type="capsule" size="0.035000 0.052607" fromto="0 0 0  0 0 0.105213" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J34" pos="0 0 0.105213">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L35">
+                                      <joint name="joint_35" type="ball" damping="0.5"/>
+                                      <geom name="bone35" type="capsule" size="0.035000 0.014805" fromto="0 0 0  0 0 0.029609" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J35" pos="0 0 0.029609">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L36">
+                                          <joint name="joint_36" type="ball" damping="0.5"/>
+                                          <geom name="bone36" type="capsule" size="0.035000 0.012521" fromto="0 0 0  0 0 0.025042" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J36" pos="0 0 0.025042">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                                <body name="L37">
+                                  <joint name="joint_37" type="ball" damping="0.5"/>
+                                  <geom name="bone37" type="capsule" size="0.035000 0.025629" fromto="0 0 0  0 0 0.051259" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J37" pos="0 0 0.051259">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L38">
+                                      <joint name="joint_38" type="ball" damping="0.5"/>
+                                      <geom name="bone38" type="capsule" size="0.035000 0.015647" fromto="0 0 0  0 0 0.031294" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J38" pos="0 0 0.031294">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L39">
+                                          <joint name="joint_39" type="ball" damping="0.5"/>
+                                          <geom name="bone39" type="capsule" size="0.035000 0.013725" fromto="0 0 0  0 0 0.027451" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J39" pos="0 0 0.027451">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                              </body>
+                            </body>
+                          </body>
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+                <body name="L14">
+                  <joint name="joint_14" type="ball" damping="0.5"/>
+                  <geom name="bone14" type="capsule" size="0.035000 0.042843" fromto="0 0 0  0 0 0.085685" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                  <body name="J14" pos="0 0 0.085685">
+                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                    <body name="L17">
+                      <joint name="joint_17" type="ball" damping="0.5"/>
+                      <geom name="bone17" type="capsule" size="0.035000 0.066668" fromto="0 0 0  0 0 0.133335" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                      <body name="J17" pos="0 0 0.133335">
+                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                        <body name="L19">
+                          <joint name="joint_19" type="ball" damping="0.5"/>
+                          <geom name="bone19" type="capsule" size="0.035000 0.136600" fromto="0 0 0  0 0 0.273199" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                          <body name="J19" pos="0 0 0.273199">
+                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                            <body name="L21">
+                              <joint name="joint_21" type="ball" damping="0.5"/>
+                              <geom name="bone21" type="capsule" size="0.035000 0.127718" fromto="0 0 0  0 0 0.255436" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                              <body name="J21" pos="0 0 0.255436">
+                                <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                <body name="L40">
+                                  <joint name="joint_40" type="ball" damping="0.5"/>
+                                  <geom name="bone40" type="capsule" size="0.035000 0.052131" fromto="0 0 0  0 0 0.104262" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J40" pos="0 0 0.104262">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L41">
+                                      <joint name="joint_41" type="ball" damping="0.5"/>
+                                      <geom name="bone41" type="capsule" size="0.035000 0.016721" fromto="0 0 0  0 0 0.033442" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J41" pos="0 0 0.033442">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L42">
+                                          <joint name="joint_42" type="ball" damping="0.5"/>
+                                          <geom name="bone42" type="capsule" size="0.035000 0.011722" fromto="0 0 0  0 0 0.023444" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J42" pos="0 0 0.023444">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                                <body name="L43">
+                                  <joint name="joint_43" type="ball" damping="0.5"/>
+                                  <geom name="bone43" type="capsule" size="0.035000 0.055564" fromto="0 0 0  0 0 0.111129" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J43" pos="0 0 0.111129">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L44">
+                                      <joint name="joint_44" type="ball" damping="0.5"/>
+                                      <geom name="bone44" type="capsule" size="0.035000 0.015902" fromto="0 0 0  0 0 0.031803" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J44" pos="0 0 0.031803">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L45">
+                                          <joint name="joint_45" type="ball" damping="0.5"/>
+                                          <geom name="bone45" type="capsule" size="0.035000 0.012370" fromto="0 0 0  0 0 0.024740" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J45" pos="0 0 0.024740">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                                <body name="L46">
+                                  <joint name="joint_46" type="ball" damping="0.5"/>
+                                  <geom name="bone46" type="capsule" size="0.035000 0.049784" fromto="0 0 0  0 0 0.099567" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J46" pos="0 0 0.099567">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L47">
+                                      <joint name="joint_47" type="ball" damping="0.5"/>
+                                      <geom name="bone47" type="capsule" size="0.035000 0.010187" fromto="0 0 0  0 0 0.020375" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J47" pos="0 0 0.020375">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L48">
+                                          <joint name="joint_48" type="ball" damping="0.5"/>
+                                          <geom name="bone48" type="capsule" size="0.035000 0.010006" fromto="0 0 0  0 0 0.020011" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J48" pos="0 0 0.020011">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                                <body name="L49">
+                                  <joint name="joint_49" type="ball" damping="0.5"/>
+                                  <geom name="bone49" type="capsule" size="0.035000 0.052245" fromto="0 0 0  0 0 0.104490" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J49" pos="0 0 0.104490">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L50">
+                                      <joint name="joint_50" type="ball" damping="0.5"/>
+                                      <geom name="bone50" type="capsule" size="0.035000 0.014680" fromto="0 0 0  0 0 0.029359" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J50" pos="0 0 0.029359">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L51">
+                                          <joint name="joint_51" type="ball" damping="0.5"/>
+                                          <geom name="bone51" type="capsule" size="0.035000 0.012395" fromto="0 0 0  0 0 0.024789" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J51" pos="0 0 0.024789">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                                <body name="L52">
+                                  <joint name="joint_52" type="ball" damping="0.5"/>
+                                  <geom name="bone52" type="capsule" size="0.035000 0.025929" fromto="0 0 0  0 0 0.051859" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                  <body name="J52" pos="0 0 0.051859">
+                                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                    <body name="L53">
+                                      <joint name="joint_53" type="ball" damping="0.5"/>
+                                      <geom name="bone53" type="capsule" size="0.035000 0.015621" fromto="0 0 0  0 0 0.031241" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                      <body name="J53" pos="0 0 0.031241">
+                                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                        <body name="L54">
+                                          <joint name="joint_54" type="ball" damping="0.5"/>
+                                          <geom name="bone54" type="capsule" size="0.035000 0.013594" fromto="0 0 0  0 0 0.027189" contype="2" conaffinity="1" rgba="1 0.6 0.6 0.6"/>
+                                          <body name="J54" pos="0 0 0.027189">
+                                            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" contype="0" conaffinity="0"/>
+                                          </body>
+                                        </body>
+                                      </body>
+                                    </body>
+                                  </body>
+                                </body>
+                              </body>
+                            </body>
+                          </body>
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </body>
+</body>
