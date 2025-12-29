@@ -47,7 +47,7 @@ setuptools.setup(
     author_email="nikita.chernyadev@gmail.com",
     packages=setuptools.find_packages(),
     python_requires=">=3.10",
-    install_requires=core_requirements,
+    # install_requires=core_requirements,
     package_data={
         "": [str(p.resolve()) for p in Path("bigym/envs/xmls").glob("**/*")]
         + [str(p.resolve()) for p in Path("bigym/envs/presets").glob("**/*.yaml")]
