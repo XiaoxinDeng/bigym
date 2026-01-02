@@ -43,10 +43,11 @@ class Human(KinematicProp):
         
         if "joints" not in self._MOTION_FILE or "fps" not in self._MOTION_FILE:
             raise RuntimeError("self._MOTION_FILE must contain 'joints' and 'fps'.")
+        
+        self._MOTION_JOINTS = self._MOTION_FILE['joints'].astype(np.float64)
         if self._MOTION_JOINTS.ndim != 3 or self._MOTION_JOINTS.shape[2] != 3:
             raise RuntimeError(f"self._MOTION_FILE 'joints' must have shape (T, Nj, 3), got {self._MOTION_JOINTS.shape}")
         
-        self._MOTION_JOINTS = self._MOTION_FILE['joints'].astype(np.float64)
         self._MOTION_FPS = float(self._MOTION_FILE['fps'])
         self.dt_frame = 1.0 / max(self._MOTION_FPS, 1e-9)
         self._NUM_FRAMES, self._NUM_JOINTS, _ = self._MOTION_JOINTS.shape
@@ -194,5 +195,6 @@ class Human(KinematicProp):
         # ball joints qpos: [qw,qx,qy,qz]
         for i in range(1, Nj):
             self._qpos_ball[i][:] = q_local[i]
-
+            
+        physics.data.qvel[:] = 0.0          # important: stop accumulation
         physics.forward()

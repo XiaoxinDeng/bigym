@@ -2,7 +2,7 @@
 import numpy as np
 
 from bigym.action_modes import TorqueActionMode
-from bigym.envs.reach_target import ReachTarget
+from bigym.envs.cupboards_with_human import HumanCupboardsCloseAll
 from bigym.utils.observation_config import ObservationConfig, CameraConfig
 
 try:
@@ -16,19 +16,25 @@ except ImportError:
 
 
 print("Running 1000 steps with pixels...")
-env = ReachTarget(
+env = HumanCupboardsCloseAll(
     action_mode=TorqueActionMode(floating_base=True),
     observation_config=ObservationConfig(
         cameras=[
+            # CameraConfig(
+            #     name="head",
+            #     rgb=True,
+            #     depth=False,
+            #     resolution=(128, 128),
+            # ),
             CameraConfig(
-                name="head",
-                rgb=True,
-                depth=False,
-                resolution=(128, 128),
-            )
+                name="external", 
+                rgb=True, 
+                depth=False, 
+                resolution=(256, 256)
+            ),
         ],
     ),
-    render_mode=None,
+    render_mode="rgb_array",
 )
 
 print("Observation Space:")
@@ -40,7 +46,8 @@ env.reset()
 recorded_observations = []
 for i in range(1000):
     obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
-    recorded_observations.append(obs["rgb_head"])
+    # recorded_observations.append(obs["rgb_head"])
+    recorded_observations.append(obs["rgb_external"])
     if i % 1000 == 0:
         env.reset()
 env.close()
@@ -51,3 +58,4 @@ video_clip = VideoClip(
     make_frame=lambda t: frames[int(t * fps)], duration=int(len(frames) / fps)
 )
 video_clip.preview()
+video_clip.write_videofile("human_cupboard.mp4", fps)
