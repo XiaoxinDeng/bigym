@@ -82,7 +82,10 @@ class Human(KinematicProp):
         
         self._qpos_ball = [None] * self._NUM_JOINTS
         for i in range(1, self._NUM_JOINTS):
-            self._qpos_ball[i] = self._get_qpos_addr(f"{self._BALL_JOINT_PREFIX}{i}")
+            qpos_addr = self._get_qpos_addr(f"{self._BALL_JOINT_PREFIX}{i}")
+            self._qpos_ball[i] = qpos_addr
+            if qpos_addr is not None:
+                print(f"Cached qpos view for ball joint '{len(self._qpos_ball)}': shape {self._qpos_ball[i].shape}")
         self._qvel_slice = self.compute_qvel_slice_from_joint_names()
 
     def _get_qpos_addr(self, name:str):
@@ -92,6 +95,8 @@ class Human(KinematicProp):
         try:
             return self._physics.named.data.qpos[name]
         except KeyError as e:
+            print(f"Cannot find joint '{name}' in physics.named.data.qpos from exception: {e}")
+            return None
             raise RuntimeError(f"Cannot find joint '{name}' in physics.named.data.qpos") from e
 
     def joint_dof_size(self, model, jid: int) -> int:
@@ -103,12 +108,15 @@ class Human(KinematicProp):
         starts, ends = [], []
 
         for name in self._HUMAN_JOINT_NAMES:
-            jid = m.joint(self._ROOT_PREFIX + name).id
-            s = m.jnt_dofadr[jid]
-            e = s + self.joint_dof_size(m, jid)
-            starts.append(s); ends.append(e)
-
-        return min(starts), max(ends)
+            try:
+                jid = m.joint(self._ROOT_PREFIX + name).id
+                s = m.jnt_dofadr[jid]
+                e = s + self.joint_dof_size(m, jid)
+                starts.append(s); ends.append(e)
+            except Exception as e:
+                print(f"Cannot find joint '{self._ROOT_PREFIX + name}' in physics model from exception: {e}")
+            finally:
+                return min(starts), max(ends)
 
     @property
     def _model_path(self) -> Path:
@@ -212,8 +220,10 @@ class Human(KinematicProp):
         
         # ball joints qpos: [qw,qx,qy,qz]
         for i in range(1, Nj):
-            self._qpos_ball[i][:] = q_local[i]
-            
+            if self._qpos_ball[i] is not None:
+                self._qpos_ball[i][:] = q_local[i]
+                print(f"Set ball joint '{i}' qpos to {q_local[i]}")
+
         # important: stop accumulation
         self._reset_human_physics_state()
         self._physics.forward()
