@@ -27,6 +27,8 @@ class Human(KinematicProp):
     
     _ROOT_PREFIX:str = "base_cabinet_600_with_human/"
     _BALL_JOINT_PREFIX: str = _ROOT_PREFIX+"joint_"
+    _HUMAN_JOINT_NAMES: list[str] = ["root_tx","root_ty","root_tz","root_rx","root_ry","root_rz",] + \
+                                     ["joint_"+str(i) for i in range(1, 54)]
     # qpos attributes
     _qpos_root_t: np.ndarray = None
     _qpos_root_r: np.ndarray = None
@@ -68,28 +70,45 @@ class Human(KinematicProp):
         else:
             raise RuntimeError("self._MOTION_FILE must contain 'parents' or 'bone_pairs' to define the kinematic tree.")
         
-        physics = self._mojo.physics
+        self._physics = self._mojo.physics
         self._qpos_root_t = np.zeros(3, dtype=np.float64)
         self._qpos_root_r = np.zeros(3, dtype=np.float64)
-        self._qpos_root_tx = self._get_qpos_addr(physics, self._ROOT_PREFIX+"root_tx")  # scalar view
-        self._qpos_root_ty = self._get_qpos_addr(physics, self._ROOT_PREFIX+"root_ty")
-        self._qpos_root_tz = self._get_qpos_addr(physics, self._ROOT_PREFIX+"root_tz")
-        self._qpos_root_rx = self._get_qpos_addr(physics, self._ROOT_PREFIX+"root_rx")
-        self._qpos_root_ry = self._get_qpos_addr(physics, self._ROOT_PREFIX+"root_ry")
-        self._qpos_root_rz = self._get_qpos_addr(physics, self._ROOT_PREFIX+"root_rz")
+        self._qpos_root_tx = self._get_qpos_addr(self._ROOT_PREFIX+"root_tx")  # scalar view
+        self._qpos_root_ty = self._get_qpos_addr(self._ROOT_PREFIX+"root_ty")
+        self._qpos_root_tz = self._get_qpos_addr(self._ROOT_PREFIX+"root_tz")
+        self._qpos_root_rx = self._get_qpos_addr(self._ROOT_PREFIX+"root_rx")
+        self._qpos_root_ry = self._get_qpos_addr(self._ROOT_PREFIX+"root_ry")
+        self._qpos_root_rz = self._get_qpos_addr(self._ROOT_PREFIX+"root_rz")
         
         self._qpos_ball = [None] * self._NUM_JOINTS
         for i in range(1, self._NUM_JOINTS):
-            self._qpos_ball[i] = self._get_qpos_addr(physics, f"{self._BALL_JOINT_PREFIX}{i}")
-    
-    def _get_qpos_addr(self, physics, name:str):
+            self._qpos_ball[i] = self._get_qpos_addr(f"{self._BALL_JOINT_PREFIX}{i}")
+        self._qvel_slice = self.compute_qvel_slice_from_joint_names()
+
+    def _get_qpos_addr(self, name:str):
         """
         Safely obtain qpos address from model
         """
         try:
-            return physics.named.data.qpos[name]
+            return self._physics.named.data.qpos[name]
         except KeyError as e:
             raise RuntimeError(f"Cannot find joint '{name}' in physics.named.data.qpos") from e
+
+    def joint_dof_size(self, model, jid: int) -> int:
+        jtype = model.jnt_type[jid]   # 0 free, 1 ball, 2 slide, 3 hinge
+        return 6 if jtype == 0 else 3 if jtype == 1 else 1
+
+    def compute_qvel_slice_from_joint_names(self):
+        m = self._physics.model
+        starts, ends = [], []
+
+        for name in self._HUMAN_JOINT_NAMES:
+            jid = m.joint(self._ROOT_PREFIX + name).id
+            s = m.jnt_dofadr[jid]
+            e = s + self.joint_dof_size(m, jid)
+            starts.append(s); ends.append(e)
+
+        return min(starts), max(ends)
 
     @property
     def _model_path(self) -> Path:
@@ -132,14 +151,13 @@ class Human(KinematicProp):
         self._CURRENT_FRAME = self._time_to_frame(t)
         self._apply_frame(self._CURRENT_FRAME)
 
-    def step(self, dt: float):
+    def _on_step(self, dt: float):
         """Advance time and write mocap poses."""
         self._CURRENT_TIME += dt
         self._CURRENT_FRAME = self._time_to_frame(self._CURRENT_TIME)
         self._apply_frame(self._CURRENT_FRAME)
 
     def _apply_frame(self, frame: int):
-        physics = self._mojo.physics
         pelvis_index: int = 0
         Jw:np.ndarray = self._MOTION_JOINTS[frame].astype(np.float64)  # (Nj,3) world
         Nj:int = self._NUM_JOINTS
@@ -196,5 +214,30 @@ class Human(KinematicProp):
         for i in range(1, Nj):
             self._qpos_ball[i][:] = q_local[i]
             
-        physics.data.qvel[:] = 0.0          # important: stop accumulation
-        physics.forward()
+        # important: stop accumulation
+        self._reset_human_physics_state()
+        self._physics.forward()
+ 
+    def _reset_human_physics_state(self):
+        """Completely reset physics state for human bodies to prevent bouncing."""
+        
+        # Zero all human-related physics quantities
+        self._physics.data.qvel[self._qvel_slice[0]:self._qvel_slice[1]] = 0.0
+        # self._physics.data.qvel[:] = 0.0
+        # self._physics.data.qacc[:] = 0.0
+        # self._physics.data.ctrl[:] = 0.0
+        
+        # # Zero external forces
+        # self._physics.data.qfrc_applied[:] = 0.0
+        # self._physics.data.xfrc_applied[:] = 0.0
+        
+        # # Zero constraint forces (these cause bouncing)
+        # self._physics.data.qfrc_constraint[:] = 0.0
+        
+        # # Zero body velocities and accelerations
+        # self._physics.data.cvel[:] = 0.0
+        # self._physics.data.cacc[:] = 0.0
+        
+        # # Reset actuator forces
+        # if self._physics.model.nu > 0:
+        #     self._physics.data.actuator_force[:] = 0.0
