@@ -39,7 +39,7 @@ class BiGymEnv(gym.Env):
         "render_fps": 1 / PHYSICS_DT,
     }
 
-    _ENV_CAMERAS = ["external"]
+    _ENV_CAMERAS = ["external", "external2"]
 
     _MODEL_PATH: Path = WORLD_MODEL
     _PRESET_PATH: Optional[Path] = None

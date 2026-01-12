@@ -20,5 +20,6 @@
       <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
     </body>
     <camera name="external" mode="fixed" pos="0 -2 3" xyaxes="1.000 0.000 0.000 0.000 0.707 0.707"/>
+    <camera name="external2" mode="fixed" pos="-0.5 -3.0 3.7" xyaxes="1.000 0.000 0.000 0.000 0.707 0.707"/>
   </worldbody>
 </mujoco>
