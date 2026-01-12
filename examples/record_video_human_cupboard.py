@@ -1,6 +1,6 @@
 import imageio
 import numpy as np
-
+from tqdm import tqdm, trange
 from bigym.action_modes import JointPositionActionMode
 from bigym.envs.cupboards_with_human import HumanCupboardsOpenAll
 
@@ -12,7 +12,8 @@ env.reset()
 
 writer = imageio.get_writer("human_cupboard.mp4", fps=30)
 
-for t in range(300):
+n_steps = 300
+for t in trange(n_steps):
     action = np.zeros_like(env.action_space.sample())
     obs, reward, termination, truncation, info = env.step(action)
 
