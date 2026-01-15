@@ -51,7 +51,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
     episode_length = 500
 
     # Record the demo
-    env.reset()
+    env.reset(seed=42)
     demo_recorder.record(env)
 
     expected = []
