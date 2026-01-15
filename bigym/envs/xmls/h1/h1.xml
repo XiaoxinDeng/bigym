@@ -9,7 +9,7 @@
         <geom type="mesh" contype="0" conaffinity="0" group="2" material="black"/>
       </default>
       <default class="collision">
-        <geom group="3" mass="0" density="0"/>
+        <geom group="3" mass="0" density="0" contype="1" conaffinity="2"/>
         <default class="foot">
           <geom type="capsule" size=".014"/>
           <default class="foot1">
