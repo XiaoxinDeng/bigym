@@ -1,13 +1,15 @@
 """Cupboard interaction tasks."""
 from abc import ABC
+from typing import Optional, Any
 
 import numpy as np
+from gymnasium import spaces
 
-from bigym.bigym_env import BiGymEnv
+from bigym.bigym_env import BiGymEnv, PHYSICS_DT
 from bigym.const import PRESETS_PATH
 from bigym.envs.props.cabintets import BaseCabinet, WallCabinet
 from bigym.envs.props.human import Human
-from typing import Optional
+
 TOLERANCE = 0.1
 
 
@@ -44,9 +46,37 @@ class _HumanCupboardsInteractionEnv(BiGymEnv, ABC):
         for human in self.humans:
             human._on_step(self._mojo.model.opt.timestep * self._sub_steps_count)
 
+    def _on_step(self):
+        """Step the human motion during simulation."""
+        dt = PHYSICS_DT * self._sub_steps_count
+        for human in self.humans:
+            human.step(dt)
+
     def _on_reset(self, seed: Optional[int] = None):
         for human in self.humans:
             human.reset(seed=seed)
+
+    def _get_task_privileged_obs_space(self) -> dict[str, Any]:
+        """Add human joint positions to observation space."""
+        obs_space = {}
+        # Each human has num_joints joints, each with (x, y, z) position
+        for i, human in enumerate(self.humans):
+            key = f"human_{i}_joints" if len(self.humans) > 1 else "human_joints"
+            obs_space[key] = spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(human.num_joints * 3,),
+                dtype=np.float32,
+            )
+        return obs_space
+
+    def _get_task_privileged_obs(self) -> dict[str, Any]:
+        """Return human joint positions as observations."""
+        obs = {}
+        for i, human in enumerate(self.humans):
+            key = f"human_{i}_joints" if len(self.humans) > 1 else "human_joints"
+            obs[key] = human.get_joint_positions()
+        return obs
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         """Reset the environment.

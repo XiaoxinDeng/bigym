@@ -9,7 +9,7 @@ from demonstrations.demo_recorder import DemoRecorder
 from demonstrations.demo_converter import DemoConverter
 from demonstrations.demo import Demo
 
-render = False
+render = True
 cam = "head"
 cam_key = f"rgb_{cam}"
 
