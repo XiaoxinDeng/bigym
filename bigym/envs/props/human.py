@@ -84,8 +84,6 @@ class Human(KinematicProp):
         for i in range(1, self._NUM_JOINTS):
             qpos_addr = self._get_qpos_addr(f"{self._BALL_JOINT_PREFIX}{i}")
             self._qpos_ball[i] = qpos_addr
-            if qpos_addr is not None:
-                print(f"Cached qpos view for ball joint '{len(self._qpos_ball)}': shape {self._qpos_ball[i].shape}")
         self._qvel_slice = self.compute_qvel_slice_from_joint_names()
 
     def _get_qpos_addr(self, name:str):
@@ -95,8 +93,6 @@ class Human(KinematicProp):
         try:
             return self._physics.named.data.qpos[name]
         except KeyError as e:
-            print(f"Cannot find joint '{name}' in physics.named.data.qpos from exception: {e}")
-            return None
             raise RuntimeError(f"Cannot find joint '{name}' in physics.named.data.qpos") from e
 
     def joint_dof_size(self, model, jid: int) -> int:
@@ -222,7 +218,6 @@ class Human(KinematicProp):
         for i in range(1, Nj):
             if self._qpos_ball[i] is not None:
                 self._qpos_ball[i][:] = q_local[i]
-                print(f"Set ball joint '{i}' qpos to {q_local[i]}")
 
         # important: stop accumulation
         self._reset_human_physics_state()

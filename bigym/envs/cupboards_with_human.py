@@ -38,6 +38,11 @@ class _HumanCupboardsInteractionEnv(BiGymEnv, ABC):
             if not human.is_colliding(self.cabinet_wall.shelf_bottom):
                 return False
         return True
+    
+    def _on_step(self):
+        human: Human
+        for human in self.humans:
+            human._on_step(self._mojo.model.opt.timestep * self._sub_steps_count)
 
     def _on_reset(self, seed: Optional[int] = None):
         for human in self.humans:
