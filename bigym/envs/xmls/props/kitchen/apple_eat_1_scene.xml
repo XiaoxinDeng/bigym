@@ -1,0 +1,180 @@
+<mujoco model="scene_with_human">
+  <compiler angle="radian" inertiafromgeom="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <headlight ambient="0.25 0.25 0.25" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2"/>
+  </visual>
+  <default>
+    <geom friction="0.8 0.1 0.1" solref="0.002 1" solimp="0.9 0.95 0.001"/>
+  </default>
+  <worldbody>
+    <geom name="ground" type="plane" size="10 10 0.1" rgba="0.8 0.8 0.8 1"/>
+    <light name="key" pos="2 2 3" dir="-1 -1 -1" diffuse="1 1 1" specular="0.2 0.2 0.2"/>
+    <camera name="render_cam" mode="fixed" pos="0 -6 2" quat="0.70710678 0.70710678 0 0"/>
+    <include file="apple_eat_1_human_fragment.xml"/>
+  </worldbody>
+  <actuator>
+    <motor name="m_1_x" joint="joint_1" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_1_y" joint="joint_1" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_1_z" joint="joint_1" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_2_x" joint="joint_2" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_2_y" joint="joint_2" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_2_z" joint="joint_2" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_3_x" joint="joint_3" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_3_y" joint="joint_3" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_3_z" joint="joint_3" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_4_x" joint="joint_4" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_4_y" joint="joint_4" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_4_z" joint="joint_4" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_5_x" joint="joint_5" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_5_y" joint="joint_5" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_5_z" joint="joint_5" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_6_x" joint="joint_6" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_6_y" joint="joint_6" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_6_z" joint="joint_6" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_7_x" joint="joint_7" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_7_y" joint="joint_7" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_7_z" joint="joint_7" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_8_x" joint="joint_8" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_8_y" joint="joint_8" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_8_z" joint="joint_8" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_9_x" joint="joint_9" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_9_y" joint="joint_9" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_9_z" joint="joint_9" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_10_x" joint="joint_10" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_10_y" joint="joint_10" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_10_z" joint="joint_10" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_11_x" joint="joint_11" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_11_y" joint="joint_11" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_11_z" joint="joint_11" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_12_x" joint="joint_12" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_12_y" joint="joint_12" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_12_z" joint="joint_12" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_13_x" joint="joint_13" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_13_y" joint="joint_13" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_13_z" joint="joint_13" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_14_x" joint="joint_14" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_14_y" joint="joint_14" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_14_z" joint="joint_14" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_15_x" joint="joint_15" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_15_y" joint="joint_15" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_15_z" joint="joint_15" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_16_x" joint="joint_16" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_16_y" joint="joint_16" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_16_z" joint="joint_16" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_17_x" joint="joint_17" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_17_y" joint="joint_17" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_17_z" joint="joint_17" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_18_x" joint="joint_18" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_18_y" joint="joint_18" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_18_z" joint="joint_18" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_19_x" joint="joint_19" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_19_y" joint="joint_19" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_19_z" joint="joint_19" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_20_x" joint="joint_20" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_20_y" joint="joint_20" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_20_z" joint="joint_20" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_21_x" joint="joint_21" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_21_y" joint="joint_21" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_21_z" joint="joint_21" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_22_x" joint="joint_22" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_22_y" joint="joint_22" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_22_z" joint="joint_22" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_23_x" joint="joint_23" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_23_y" joint="joint_23" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_23_z" joint="joint_23" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_24_x" joint="joint_24" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_24_y" joint="joint_24" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_24_z" joint="joint_24" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_25_x" joint="joint_25" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_25_y" joint="joint_25" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_25_z" joint="joint_25" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_26_x" joint="joint_26" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_26_y" joint="joint_26" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_26_z" joint="joint_26" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_27_x" joint="joint_27" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_27_y" joint="joint_27" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_27_z" joint="joint_27" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_28_x" joint="joint_28" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_28_y" joint="joint_28" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_28_z" joint="joint_28" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_29_x" joint="joint_29" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_29_y" joint="joint_29" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_29_z" joint="joint_29" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_30_x" joint="joint_30" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_30_y" joint="joint_30" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_30_z" joint="joint_30" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_31_x" joint="joint_31" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_31_y" joint="joint_31" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_31_z" joint="joint_31" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_32_x" joint="joint_32" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_32_y" joint="joint_32" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_32_z" joint="joint_32" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_33_x" joint="joint_33" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_33_y" joint="joint_33" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_33_z" joint="joint_33" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_34_x" joint="joint_34" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_34_y" joint="joint_34" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_34_z" joint="joint_34" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_35_x" joint="joint_35" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_35_y" joint="joint_35" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_35_z" joint="joint_35" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_36_x" joint="joint_36" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_36_y" joint="joint_36" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_36_z" joint="joint_36" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_37_x" joint="joint_37" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_37_y" joint="joint_37" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_37_z" joint="joint_37" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_38_x" joint="joint_38" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_38_y" joint="joint_38" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_38_z" joint="joint_38" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_39_x" joint="joint_39" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_39_y" joint="joint_39" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_39_z" joint="joint_39" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_40_x" joint="joint_40" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_40_y" joint="joint_40" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_40_z" joint="joint_40" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_41_x" joint="joint_41" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_41_y" joint="joint_41" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_41_z" joint="joint_41" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_42_x" joint="joint_42" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_42_y" joint="joint_42" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_42_z" joint="joint_42" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_43_x" joint="joint_43" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_43_y" joint="joint_43" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_43_z" joint="joint_43" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_44_x" joint="joint_44" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_44_y" joint="joint_44" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_44_z" joint="joint_44" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_45_x" joint="joint_45" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_45_y" joint="joint_45" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_45_z" joint="joint_45" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_46_x" joint="joint_46" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_46_y" joint="joint_46" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_46_z" joint="joint_46" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_47_x" joint="joint_47" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_47_y" joint="joint_47" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_47_z" joint="joint_47" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_48_x" joint="joint_48" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_48_y" joint="joint_48" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_48_z" joint="joint_48" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_49_x" joint="joint_49" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_49_y" joint="joint_49" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_49_z" joint="joint_49" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_50_x" joint="joint_50" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_50_y" joint="joint_50" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_50_z" joint="joint_50" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_51_x" joint="joint_51" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_51_y" joint="joint_51" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_51_z" joint="joint_51" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_52_x" joint="joint_52" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_52_y" joint="joint_52" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_52_z" joint="joint_52" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_53_x" joint="joint_53" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_53_y" joint="joint_53" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_53_z" joint="joint_53" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_54_x" joint="joint_54" gear="1 0 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_54_y" joint="joint_54" gear="0 1 0" ctrllimited="true" ctrlrange="-50 50"/>
+    <motor name="m_54_z" joint="joint_54" gear="0 0 1" ctrllimited="true" ctrlrange="-50 50"/>
+  </actuator>
+</mujoco>

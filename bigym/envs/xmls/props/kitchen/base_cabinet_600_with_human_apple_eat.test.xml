@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco model="base_cabinet_600_with_human">
+  <compiler angle="radian" meshdir="assets" texturedir="assets" autolimits="true"/>
+
+
+  <default>
+    <!-- <default class="base_cabinet_600"> -->
+    <geom density="10" solimp="0.998 0.998 0.001" solref="0.004 1"/>
+    <joint solimplimit="0.998 0.998 0.001" solreflimit="0.004 1"/>
+    <!-- <default class="visual">
+      <geom contype="0" conaffinity="0"/>
+    </default> -->
+    <default class="limb_collision">
+      <geom group="4" contype="2" conaffinity="2"/>
+    </default>
+    <default class="bone_collision">
+      <geom group="4" contype="2" conaffinity="2"/>
+    </default>
+    <site size="0.001" rgba="0.5 0.5 0.5 0.3" group="4"/>
+    <!-- </default> -->
+    <default class="human">
+      <geom type="capsule" rgba="1 0.6 0.6 0.35" density="1e-3"/>
+      <joint damping="2" armature="0.02" limited="true"/>
+    </default>
+  </default>
+
+  <worldbody>
+
+    <!-- Articulated human fragment -->
+    <body name="human" gravcomp="1">
+      <inertial pos="0 0 0" mass="70" diaginertia="1e-6 1e-6 1e-6"/>
+      <body name="J0">
+        <!-- <freejoint name="root_free"/> -->
+        <!-- Root translation -->
+        <joint name="root_tx" type="slide" axis="1 0 0" damping="0.0" />
+        <joint name="root_ty" type="slide" axis="0 1 0" damping="0.0" />
+        <joint name="root_tz" type="slide" axis="0 0 1" damping="0.0" />
+        <!-- Root rotation (Euler) -->
+        <joint name="root_rx" type="hinge" axis="1 0 0" damping="0.0" />
+        <joint name="root_ry" type="hinge" axis="0 1 0" damping="0.0" />
+        <joint name="root_rz" type="hinge" axis="0 0 1" damping="0.0" />
+        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" class="limb_collision"/>
+        <body name="L1">
+          <joint name="joint_1" type="ball" damping="0.5"/>
+          <geom name="bone1" type="capsule" size="0.035000 0.054762" fromto="0 0 0  0 0 0.109523" class="bone_collision" rgba="1 0.6 0.6 0.6"/>
+          <body name="J1" pos="0 0 0.109523">
+            <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" class="limb_collision"/>
+            <body name="L4">
+              <joint name="joint_4" type="ball" damping="0.5"/>
+              <geom name="bone4" type="capsule" size="0.035000 0.196672" fromto="0 0 0  0 0 0.393344" class="bone_collision" rgba="1 0.6 0.6 0.6"/>
+              <body name="J4" pos="0 0 0.393344">
+                <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" class="limb_collision"/>
+                <body name="L7">
+                  <joint name="joint_7" type="ball" damping="0.5"/>
+                  <geom name="bone7" type="capsule" size="0.035000 0.204836" fromto="0 0 0  0 0 0.409673" class="bone_collision" rgba="1 0.6 0.6 0.6"/>
+                  <body name="J7" pos="0 0 0.409673">
+                    <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" class="limb_collision"/>
+                    <body name="L10">
+                      <joint name="joint_10" type="ball" damping="0.5"/>
+                      <geom name="bone10" type="capsule" size="0.035000 0.076836" fromto="0 0 0  0 0 0.153671" class="bone_collision" rgba="1 0.6 0.6 0.6"/>
+                      <body name="J10" pos="0 0 0.153671">
+                        <geom type="sphere" size="0.01" rgba="0.2 0.6 1 0.7" class="limb_collision"/>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
