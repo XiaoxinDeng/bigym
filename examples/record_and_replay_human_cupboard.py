@@ -9,7 +9,7 @@ from demonstrations.demo_recorder import DemoRecorder
 from demonstrations.demo_converter import DemoConverter
 from demonstrations.demo import Demo
 
-render = False
+render = True
 cam = "head"
 cam_key = f"rgb_{cam}"
 
@@ -51,7 +51,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
     episode_length = 500
 
     # Record the demo
-    env.reset()
+    env.reset(seed=42)
     demo_recorder.record(env)
 
     expected = []
