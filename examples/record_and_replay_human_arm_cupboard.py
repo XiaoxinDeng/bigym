@@ -14,12 +14,29 @@ from bigym.action_modes import PelvisDof
 import os
 
 control_frequency = 50
-n_steps = 3000
-filedir = "/home/xiaoxin/.bigym/demonstrations/0.9.0/CupboardsOpenAll/JointPositionActionMode_floating_pelvis_x_pelvis_y_pelvis_z_pelvis_rz_absolute/lightweight/"
-files = os.listdir(filedir)
-filename = os.path.join(filedir, files[0])
-assert os.path.exists(filename), f"{filename} invalid"
 
+demo_env = CupboardsOpenAll(
+    action_mode=JointPositionActionMode(floating_base=True, absolute=True),
+    render_mode="rgb_array",
+    control_frequency=50,
+)
+metadata = Metadata.from_env(demo_env)
+
+# Get demonstrations from DemoStore
+demo_store = DemoStore()
+try:
+    demos = demo_store.get_demos(metadata, amount=1, frequency=control_frequency)
+    demo = demos[0]
+except Exception as e:
+    print(e + "\n" + "==="*10)
+    print(f"Run with a safetenser from CACHE_PATH: {CACHE_PATH}")
+    filedir = f"{CACHE_PATH}/demonstrations/0.9.0/CupboardsOpenAll/JointPositionActionMode_floating_pelvis_x_pelvis_y_pelvis_z_pelvis_rz_absolute/lightweight/"
+    files = os.listdir(filedir)
+    filename = os.path.join(filedir, files[0])
+    assert os.path.exists(filename), f"{filename} invalid"
+    demo = Demo.from_safetensors(filename)
+
+n_steps = 3000
 render = True
 writer = imageio.get_writer("human_cupboard_demo.mp4", fps=30)
 
@@ -37,24 +54,18 @@ env = HumanArmCupboardsOpenAll(
 )
 env.reset()
 
-demo_env = CupboardsOpenAll(
-    action_mode=JointPositionActionMode(floating_base=True, absolute=True),
-    render_mode="rgb_array",
-    control_frequency=50,
-)
-metadata = Metadata.from_env(demo_env)
-# Get demonstrations from DemoStore
-demo = Demo.from_safetensors(filename)
+
+
 # # Replay first demonstration
 # player = DemoPlayer()
 # player.replay_in_env(demo, env, demo_frequency=control_frequency)
 request = []
 actual = []
 
-demo = DemoConverter.absolute_to_delta(demo)
+# demo = DemoConverter.absolute_to_delta(demo)
 
 # Replay the demo
-for timestep in demo.timesteps:
+for timestep in tqdm(demo.timesteps, desc="Processing timesteps"):    
     # Using joint positions as action does not reproduce the same trajectory
     # since the simulation is controlled using PID controllers.
     action = timestep.executed_action
