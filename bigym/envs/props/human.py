@@ -1,248 +1,212 @@
-"""Human props."""
+"""Human props with mocap skeleton."""
 from pathlib import Path
+from typing import Optional, List
+from dataclasses import dataclass
 
+import numpy as np
+from dm_control import mjcf
+from mojo import Mojo
+from mojo.elements import Geom
 
 from bigym.const import ASSETS_PATH
-from bigym.envs.props.prop import KinematicProp
-import numpy as np
-from bigym.envs.props.human_utils import *
-from dataclasses import dataclass
-from typing import Optional
-from dm_control import mjcf
-from bigym.utils.quaternion import *
+from bigym.envs.props.human_utils import normalize, quat_from_two_unit_vectors
 
-class Human(KinematicProp):
-    """Human model for interaction with props."""
-    _HUMAN_JOINT_XML_DIR: str = ASSETS_PATH / "props/kitchen/base_cabinet_600_with_human_apple_eat.xml"
-    _MOTION_JOINTS_DIR: str = ASSETS_PATH / "props/kitchen/apple_eat_1_mujoco_joints.npz"
-    _MOTION_FILE: np.ndarray = np.load(_MOTION_JOINTS_DIR)  # (T, Nj, 3)
-    _MOTION_FPS: float = 30.0 
-    _CURRENT_TIME:float = 0.0
-    _CURRENT_FRAME:int = 0
-    _RESET_WITH_SEED: bool = True
-    _SEED: Optional[int] = None
-    _PARENTS: Optional[np.ndarray] = None
-    _NUM_FRAMES: int = 0
-    _NUM_JOINTS:int = 0
-    
-    _ROOT_PREFIX:str = "base_cabinet_600_with_human/"
-    _BALL_JOINT_PREFIX: str = _ROOT_PREFIX+"joint_"
-    _HUMAN_JOINT_NAMES: list[str] = ["root_tx","root_ty","root_tz","root_rx","root_ry","root_rz",] + \
-                                     ["joint_"+str(i) for i in range(1, 54)]
-    # qpos attributes
-    _qpos_root_t: np.ndarray = None
-    _qpos_root_r: np.ndarray = None
-    _qpos_root_tx: np.ndarray = None
-    _qpos_root_ty: np.ndarray = None
-    _qpos_root_tz: np.ndarray = None
-    _qpos_root_rx: np.ndarray = None
-    _qpos_root_ry: np.ndarray = None
-    _qpos_root_rz: np.ndarray = None
-    _qpos_ball: np.ndarray = None
 
-    def __init__(self, mojo, kinematic = None, cache_colliders = None, cache_sites = None, parent = None, **kwargs):
-        super().__init__(mojo, kinematic, cache_colliders, cache_sites, parent, **kwargs)
-        
-        if "joints" not in self._MOTION_FILE or "fps" not in self._MOTION_FILE:
-            raise RuntimeError("self._MOTION_FILE must contain 'joints' and 'fps'.")
-        
-        self._MOTION_JOINTS = self._MOTION_FILE['joints'].astype(np.float64)
-        if self._MOTION_JOINTS.ndim != 3 or self._MOTION_JOINTS.shape[2] != 3:
-            raise RuntimeError(f"self._MOTION_FILE 'joints' must have shape (T, Nj, 3), got {self._MOTION_JOINTS.shape}")
-        
-        self._MOTION_FPS = float(self._MOTION_FILE['fps'])
-        self.dt_frame = 1.0 / max(self._MOTION_FPS, 1e-9)
-        self._NUM_FRAMES, self._NUM_JOINTS, _ = self._MOTION_JOINTS.shape
-        
-        # parents (preferred)
-        if "parents" in self._MOTION_FILE:
-            self._PARENTS = self._MOTION_FILE["parents"].astype(np.int32)
-            if self._PARENTS.shape != (self._NUM_JOINTS,):
-                raise RuntimeError(f"self._MOTION_FILE 'parents' must have shape ({self._NUM_JOINTS},), got {self._PARENTS.shape}")
-        elif "bone_pairs" in self._MOTION_FILE:
-            self._PARENTS = np.full((self._NUM_JOINTS,), -1, dtype=np.int32)
-            bp = self._MOTION_FILE["bone_pairs"].astype(np.int32)
-            for p, c in bp:
-                if 0 <= c < self._NUM_JOINTS:
-                    self._PARENTS[c] = int(p)
-            if self._PARENTS[0] != -1:
-                self._PARENTS[0] = -1
-        else:
-            raise RuntimeError("self._MOTION_FILE must contain 'parents' or 'bone_pairs' to define the kinematic tree.")
-        
-        self._physics = self._mojo.physics
-        self._qpos_root_t = np.zeros(3, dtype=np.float64)
-        self._qpos_root_r = np.zeros(3, dtype=np.float64)
-        self._qpos_root_tx = self._get_qpos_addr(self._ROOT_PREFIX+"root_tx")  # scalar view
-        self._qpos_root_ty = self._get_qpos_addr(self._ROOT_PREFIX+"root_ty")
-        self._qpos_root_tz = self._get_qpos_addr(self._ROOT_PREFIX+"root_tz")
-        self._qpos_root_rx = self._get_qpos_addr(self._ROOT_PREFIX+"root_rx")
-        self._qpos_root_ry = self._get_qpos_addr(self._ROOT_PREFIX+"root_ry")
-        self._qpos_root_rz = self._get_qpos_addr(self._ROOT_PREFIX+"root_rz")
-        
-        self._qpos_ball = [None] * self._NUM_JOINTS
-        for i in range(1, self._NUM_JOINTS):
-            qpos_addr = self._get_qpos_addr(f"{self._BALL_JOINT_PREFIX}{i}")
-            self._qpos_ball[i] = qpos_addr
-        self._qvel_slice = self.compute_qvel_slice_from_joint_names()
+@dataclass
+class HumanMotion:
+    """Container for a pre-exported motion."""
+    joints: np.ndarray        # (T, Nj, 3) MuJoCo/world coords
+    bone_pairs: np.ndarray    # (Nb, 2) indices into Nj
+    fps: float
 
-    def _get_qpos_addr(self, name:str):
-        """
-        Safely obtain qpos address from model
-        """
-        try:
-            return self._physics.named.data.qpos[name]
-        except KeyError as e:
-            raise RuntimeError(f"Cannot find joint '{name}' in physics.named.data.qpos") from e
 
-    def joint_dof_size(self, model, jid: int) -> int:
-        jtype = model.jnt_type[jid]   # 0 free, 1 ball, 2 slide, 3 hinge
-        return 6 if jtype == 0 else 3 if jtype == 1 else 1
+class Human:
+    """Human skeleton with mocap bodies for motion playback.
 
-    def compute_qvel_slice_from_joint_names(self):
-        m = self._physics.model
-        starts, ends = [], []
+    This class directly adds mocap bodies to worldbody (required by MuJoCo)
+    rather than using the standard Prop loading mechanism.
+    """
 
-        for name in self._HUMAN_JOINT_NAMES:
+    _instance_counter: int = 0
+    _MOTION_NPZ_PATH: Path = ASSETS_PATH / "props/kitchen/banana_eat_1_mujoco_joints.npz"
+    _DEFAULT_FPS: float = 30.0
+
+    def __init__(
+        self,
+        mojo: Mojo,
+        motion_path: Optional[Path] = None,
+        fps: Optional[float] = None,
+    ):
+        """Initialize human skeleton."""
+        self._mojo = mojo
+        self._instance_id = Human._instance_counter
+        Human._instance_counter += 1
+
+        # Load motion data
+        motion_path = motion_path or self._MOTION_NPZ_PATH
+        motion_data = np.load(str(motion_path), allow_pickle=True)
+        self._motion_joints = motion_data['joints']  # (T, Nj, 3)
+        self._bone_pairs = motion_data['bone_pairs']  # (Nb, 2)
+        self._fps = fps or self._DEFAULT_FPS
+
+        self._num_joints = self._motion_joints.shape[1]
+        self._num_bones = self._bone_pairs.shape[0]
+        self._num_frames = self._motion_joints.shape[0]
+
+        # Time tracking
+        self._t: float = 0.0
+        self._frame: int = 0
+        self._base_pos: np.ndarray = np.array([0.0, 0.0, 0.0])
+
+        # Reset behavior
+        self._reset_with_seed: bool = True
+        self._seed: Optional[int] = None
+
+        # Add mocap bodies to worldbody
+        self._joint_names: List[str] = []
+        self._bone_names: List[str] = []
+        self._add_mocap_bodies_to_worldbody()
+
+        # Cache for collision checking
+        self.colliders: List[Geom] = []
+        self._cache_colliders()
+
+    def _get_unique_name(self, base: str) -> str:
+        """Generate unique name for this human instance."""
+        if self._instance_id == 0:
+            return base
+        return f"{base}_h{self._instance_id}"
+
+    def _add_mocap_bodies_to_worldbody(self):
+        """Add mocap bodies directly to worldbody via MJCF."""
+        root_mjcf = self._mojo.root_element.mjcf
+        worldbody = root_mjcf.worldbody
+
+        # Add joint markers (spheres)
+        for j in range(self._num_joints):
+            name = self._get_unique_name(f"J{j}")
+            self._joint_names.append(name)
+            body = worldbody.add('body', name=name, mocap='true')
+            body.add('geom', type='sphere', size=[0.01],
+                     rgba=[0.2, 0.6, 1.0, 0.7], contype=0, conaffinity=0)
+
+        # Add bone capsules
+        for b in range(self._num_bones):
+            name = self._get_unique_name(f"B{b}")
+            self._bone_names.append(name)
+            body = worldbody.add('body', name=name, mocap='true')
+            body.add('geom', name=self._get_unique_name(f"bone{b}"),
+                     type='capsule', size=[0.035, 0.05],
+                     contype=2, conaffinity=1, rgba=[1.0, 0.6, 0.6, 0.6])
+
+        self._mojo.mark_dirty()
+
+    def _cache_colliders(self):
+        """Cache bone colliders for collision checking."""
+        physics = self._mojo.physics
+        self.colliders = []
+        for idx in range(len(self._bone_names)):
+            geom_name = self._get_unique_name(f"bone{idx}")
             try:
-                jid = m.joint(self._ROOT_PREFIX + name).id
-                s = m.jnt_dofadr[jid]
-                e = s + self.joint_dof_size(m, jid)
-                starts.append(s); ends.append(e)
-            except Exception as e:
-                print(f"Cannot find joint '{self._ROOT_PREFIX + name}' in physics model from exception: {e}")
-            finally:
-                return min(starts), max(ends)
-
-    @property
-    def _model_path(self) -> Path:
-        return self._HUMAN_JOINT_XML_DIR
-
-    @property
-    def _motion_path(self) -> np.ndarray:
-        return self._MOTION_JOINTS_DIR
+                geom_mjcf = self._mojo.root_element.mjcf.find('geom', geom_name)
+                if geom_mjcf is not None:
+                    self.colliders.append(Geom(self._mojo, geom_mjcf))
+            except Exception:
+                pass
 
     @property
     def fps(self) -> float:
-        """Get motion fps."""
-        return self._MOTION_FPS
-    
+        return self._fps
+
+    @property
+    def num_joints(self) -> int:
+        return self._num_joints
+
     def set_fps(self, fps: float):
-        """Set motion fps."""
-        self._MOTION_FPS = fps
-    
-    def set_reset_with_seed(self, enable: bool):
-        """Set whether to randomize reset time with seed."""
-        self._RESET_WITH_SEED = enable
-    
+        self._fps = fps
+
     def set_seed(self, seed: Optional[int]):
-        """Set whether to randomize reset time with seed."""
-        self._RESET_WITH_SEED = True if seed is not None else False
-        self._SEED = seed
+        self._reset_with_seed = seed is not None
+        self._seed = seed
 
     def _time_to_frame(self, time: float) -> int:
-        """Convert time to frame index."""
-        return int(time * float(self._MOTION_FPS)) % self._MOTION_JOINTS.shape[0]
+        return int(time * self._fps) % self._num_frames
 
     def reset(self, time: float = 0.0, seed: Optional[int] = None):
         """Reset time and frame."""
         self.set_seed(seed)
         if seed is not None:
-            t = np.random.Generator(np.random.PCG64(seed)).uniform(0, self._MOTION_JOINTS.shape[0] / float(self._MOTION_FPS)) if seed is not None else 0.0
-        else:            
-            t = np.random.Generator(np.random.PCG64(self._SEED)).uniform(0, self._MOTION_JOINTS.shape[0] / float(self._MOTION_FPS)) if self._RESET_WITH_SEED else time
-        self._CURRENT_TIME = t
-        self._CURRENT_FRAME = self._time_to_frame(t)
-        self._apply_frame(self._CURRENT_FRAME)
+            rng = np.random.Generator(np.random.PCG64(seed))
+            t = rng.uniform(0, self._num_frames / self._fps)
+        elif self._reset_with_seed and self._seed is not None:
+            rng = np.random.Generator(np.random.PCG64(self._seed))
+            t = rng.uniform(0, self._num_frames / self._fps)
+        else:
+            t = time
+        self._t = t
+        self._frame = self._time_to_frame(t)
+        self._apply_frame(self._frame)
 
-    def _on_step(self, dt: float):
-        """Advance time and write mocap poses."""
-        self._CURRENT_TIME += dt
-        self._CURRENT_FRAME = self._time_to_frame(self._CURRENT_TIME)
-        self._apply_frame(self._CURRENT_FRAME)
+    def step(self, dt: float):
+        """Advance time and update mocap poses."""
+        self._t += dt
+        self._frame = self._time_to_frame(self._t)
+        self._apply_frame(self._frame)
+
+    def get_joint_positions(self) -> np.ndarray:
+        """Get current joint positions as flattened array.
+
+        Returns:
+            np.ndarray: Shape (num_joints * 3,) - flattened (x,y,z) for each joint
+        """
+        joints = self._motion_joints[self._frame].astype(np.float32)
+        return (joints + self._base_pos[None, :]).flatten()
 
     def _apply_frame(self, frame: int):
-        pelvis_index: int = 0
-        Jw:np.ndarray = self._MOTION_JOINTS[frame].astype(np.float64)  # (Nj,3) world
-        Nj:int = self._NUM_JOINTS
-        parents:np.ndarray = self._PARENTS
-        bone_rest_axis:tuple=(0.0, 0.0, 1.0)
-        center_world:np.ndarray = Jw[int(pelvis_index)]
-        
-        # set root position
-        self._qpos_root_tx[...] = center_world[0]
-        self._qpos_root_ty[...] = center_world[1]
-        self._qpos_root_tz[...] = center_world[2]
-        # set root orientation
-        self._qpos_root_rx[...] = 0.0
-        self._qpos_root_ry[...] = 0.0
-        self._qpos_root_rz[...] = 0.0
-        # ----------------------------
-        # Choose world-space center (root translation)
-        # ----------------------------
-        
-        # For rotation computation, centering is optional; it does not change bone directions.
-        Jc = Jw - center_world[None, :]
+        """Apply motion frame to mocap bodies."""
+        joints = self._motion_joints[frame].astype(np.float64)
+        joints_w = joints + self._base_pos[None, :]
 
-        rest_axis = normalize(np.array(bone_rest_axis, dtype=np.float64))
+        physics = self._mojo.physics
+        model = physics.model
+        data = physics.data
+        z_axis = np.array([0.0, 0.0, 1.0], dtype=np.float64)
 
-        # ----------------------------
-        # Compute local joint quats
-        # ----------------------------
-        q_world = {0: np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)}  # assume root identity
-        q_local = [None] * Nj
-        q_local[0] = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        # Update joint markers
+        for j, name in enumerate(self._joint_names):
+            try:
+                bid = model.name2id(name, 'body')
+                mid = int(model.body_mocapid[bid])
+                if mid >= 0:
+                    data.mocap_pos[mid] = joints_w[j]
+            except Exception:
+                pass
 
-        for i in range(1, Nj):
-            p = int(parents[i])
-            if p < 0:
-                p = 0
+        # Update bone capsules
+        for b, name in enumerate(self._bone_names):
+            try:
+                a, c = self._bone_pairs[b]
+                pa, pb = joints_w[a], joints_w[c]
+                d = pb - pa
+                d_unit = normalize(d)
+                q = quat_from_two_unit_vectors(z_axis, d_unit)
+                bid = model.name2id(name, 'body')
+                mid = int(model.body_mocapid[bid])
+                if mid >= 0:
+                    data.mocap_pos[mid] = 0.5 * (pa + pb)
+                    data.mocap_quat[mid] = q
+            except Exception:
+                pass
 
-            d_world = Jc[i] - Jc[p]
-            if np.linalg.norm(d_world) < 1e-10:
-                qloc = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
-            else:
-                d_world = normalize(d_world)
-                q_p_world = q_world.get(p, np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64))
-                d_parent = rotate_vec_by_quat(quat_inv(q_p_world), d_world)
-                qloc = quat_from_two_unit_vectors(rest_axis, normalize(d_parent))
+    def is_colliding(self, other) -> bool:
+        """Check collision with another prop or geom."""
+        from bigym.utils.physics_utils import has_collided_collections, get_colliders
+        other_colliders = get_colliders(other)
+        return has_collided_collections(self._mojo.physics, self.colliders, other_colliders)
 
-            q_local[i] = qloc
-            q_world[i] = quat_mul(q_world.get(p, np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)), qloc)
+    def get_pose(self) -> np.ndarray:
+        return self._base_pos.copy()
 
-        # ----------------------------
-        # Write qpos via cached named views
-        # ----------------------------
-        
-        # ball joints qpos: [qw,qx,qy,qz]
-        for i in range(1, Nj):
-            if self._qpos_ball[i] is not None:
-                self._qpos_ball[i][:] = q_local[i]
-
-        # important: stop accumulation
-        self._reset_human_physics_state()
-        self._physics.forward()
- 
-    def _reset_human_physics_state(self):
-        """Completely reset physics state for human bodies to prevent bouncing."""
-        
-        # Zero all human-related physics quantities
-        self._physics.data.qvel[self._qvel_slice[0]:self._qvel_slice[1]] = 0.0
-        # self._physics.data.qvel[:] = 0.0
-        # self._physics.data.qacc[:] = 0.0
-        # self._physics.data.ctrl[:] = 0.0
-        
-        # # Zero external forces
-        # self._physics.data.qfrc_applied[:] = 0.0
-        # self._physics.data.xfrc_applied[:] = 0.0
-        
-        # # Zero constraint forces (these cause bouncing)
-        # self._physics.data.qfrc_constraint[:] = 0.0
-        
-        # # Zero body velocities and accelerations
-        # self._physics.data.cvel[:] = 0.0
-        # self._physics.data.cacc[:] = 0.0
-        
-        # # Reset actuator forces
-        # if self._physics.model.nu > 0:
-        #     self._physics.data.actuator_force[:] = 0.0
+    def set_pose(self, position: np.ndarray):
+        self._base_pos = position.copy()
+        self._apply_frame(self._frame)
