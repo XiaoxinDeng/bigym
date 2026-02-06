@@ -49,6 +49,10 @@ class HumanArm(KinematicProp):
     _CURRENT_TIME: float = 0.0
     _MOTION_FPS: float = 30.0
 
+    # --- scripted noise (continuous) ---
+    _NOISE_HARMONICS: int = 4
+    _NOISE_FREQ_RANGE: Tuple[float, float] = (0.05, 0.6)  # Hz
+
     # Cached handles
     _physics = None
     _act_id: np.ndarray = None     # (3,) indices into data.ctrl
@@ -60,6 +64,10 @@ class HumanArm(KinematicProp):
     _qpos_target: np.ndarray = None   # (3,) radians
     _ctrl_target: np.ndarray = None   # (3,) torque/effort
     _hold_last_target: bool = True    # if True, keeps last target when not updated
+    _rng: np.random.Generator = None
+    _noise_freqs: np.ndarray = None   # (num_joints, harmonics)
+    _noise_phases: np.ndarray = None  # (num_joints, harmonics)
+    _noise_amps: np.ndarray = None    # (num_joints, harmonics)
 
     def __init__(self, mojo, kinematic=None, cache_colliders=None, cache_sites=None, parent=None, **kwargs):
         super().__init__(mojo, kinematic, cache_colliders, cache_sites, parent, **kwargs)
@@ -81,6 +89,7 @@ class HumanArm(KinematicProp):
         # Default targets
         self._qpos_target = np.zeros(len(self._JOINT_NAMES), dtype=np.float64)
         self._ctrl_target = np.zeros(len(self._ACT_NAMES), dtype=np.float64)
+        self._rng = np.random.default_rng()
 
         self.dt_frame = 1.0 / max(float(self._MOTION_FPS), 1e-9)
 
@@ -175,12 +184,39 @@ class HumanArm(KinematicProp):
     # --------------------
     # Scripted trajectory (optional)
     # --------------------
+    def _init_noise(self, seed: Optional[int] = None):
+        if seed is not None:
+            self._rng = np.random.default_rng(seed)
+
+        num_joints = len(self._JOINT_NAMES)
+        harmonics = int(self._NOISE_HARMONICS)
+
+        freqs = self._rng.uniform(
+            low=self._NOISE_FREQ_RANGE[0],
+            high=self._NOISE_FREQ_RANGE[1],
+            size=(num_joints, harmonics),
+        )
+        phases = self._rng.uniform(0.0, 2.0 * np.pi, size=(num_joints, harmonics))
+        amps = self._rng.uniform(0.25, 1.0, size=(num_joints, harmonics))
+        amps = amps / np.sum(amps, axis=1, keepdims=True)
+
+        self._noise_freqs = freqs
+        self._noise_phases = phases
+        self._noise_amps = amps
+
     def _traj(self, t: float) -> np.ndarray:
+        if self._noise_freqs is None:
+            self._init_noise()
+
+        # Continuous, band-limited noise per joint (sum of sines).
+        sinusoids = np.sin(2.0 * np.pi * self._noise_freqs * t + self._noise_phases)
+        noise = np.sum(self._noise_amps * sinusoids, axis=1)
+
         # radians
-        base   = np.deg2rad(30.0) * np.sin(2.0 * np.pi * 0.2 * t)
-        yaw   = np.deg2rad(30.0) * np.sin(2.0 * np.pi * 0.2 * t)
-        pitch = np.deg2rad(-40.0) * (0.5 + 0.5 * np.sin(2.0 * np.pi * 0.2 * t + 0.7))
-        elbow = np.deg2rad(20.0 + 80.0 * (0.5 + 0.5 * np.sin(2.0 * np.pi * 0.2 * t + 1.4)))
+        base = np.deg2rad(30.0) * noise[0]
+        yaw = np.deg2rad(30.0) * noise[1]
+        pitch = np.deg2rad(-20.0) + np.deg2rad(20.0) * noise[2]   # [-40, 0] deg
+        elbow = np.deg2rad(60.0) + np.deg2rad(40.0) * noise[3]   # [20, 100] deg
         return np.array([base, yaw, pitch, elbow], dtype=np.float64)
 
     # --------------------
@@ -193,6 +229,7 @@ class HumanArm(KinematicProp):
         - Else: uses scripted trajectory pose at `time`.
         """
         self._CURRENT_TIME = float(time)
+        self._init_noise(seed)
 
         if mode is not None:
             self.set_mode(mode)
