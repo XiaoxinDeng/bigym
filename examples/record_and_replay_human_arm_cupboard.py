@@ -39,7 +39,10 @@ frame_dt = 1.0 / fps
 sim_t = 0.0
 next_frame_t = 0.0
 n_timesteps = len(demo.timesteps)
-n_steps = min(n_timesteps, n_steps) # ensure steps in bound
+if n_steps is None or n_steps < 1:
+    n_steps = n_timesteps
+else:
+    n_steps = min(n_timesteps, n_steps) # ensure steps in bound
 
 
 def _snapshot(physics):
@@ -89,6 +92,8 @@ def _hold_action(env):
 def will_collide_within(env:_HumanArmCupboardsInteractionEnv, 
                         robot_colliders, horizon_s, step_dt=None):
     physics = env.mojo.physics
+    model = physics.model.ptr
+    data = physics.data.ptr
     human = env.humanarms[0]  # _HUMAN_COUNT is 1 in cupboards_with_human_arm.py
     step_dt = float(step_dt or env.get_dt())
 
@@ -104,7 +109,7 @@ def will_collide_within(env:_HumanArmCupboardsInteractionEnv,
             # Directly set human joints in the lookahead state (fast, deterministic)
             physics.data.qpos[human._qpos_adr] = q_des
             physics.data.qvel[human._qvel_adr] = 0.0
-            mujoco.mj_forward(physics.model, physics.data)
+            mujoco.mj_forward(model, data)
 
             if has_collided_collections(physics, human.colliders, robot_colliders):
                 return True, (i + 1) * step_dt
