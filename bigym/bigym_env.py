@@ -82,7 +82,15 @@ class BiGymEnv(gym.Env):
         self.action_mode = action_mode
 
         if start_seed is None:
-            start_seed = np.random.randint(2**32)
+            rng = np.random.default_rng()
+            start_seed = int(
+                rng.integers(
+                    low=0,
+                    high=np.iinfo(np.uint32).max,
+                    endpoint=True,
+                    dtype=np.uint32,
+                )
+            )
         if not isinstance(start_seed, int):
             raise ValueError("Expected start_seed to be an integer.")
         self._next_seed = start_seed
@@ -386,7 +394,15 @@ class BiGymEnv(gym.Env):
             )
         self._current_seed = self._next_seed
         assert self._current_seed is not None
-        self._next_seed = np.random.randint(2**32)
+        rng = np.random.default_rng()
+        self._next_seed = int(
+                rng.integers(
+                    low=0,
+                    high=np.iinfo(np.uint32).max,
+                    endpoint=True,
+                    dtype=np.uint32,
+                )
+            )
         np.random.seed(self._current_seed)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
