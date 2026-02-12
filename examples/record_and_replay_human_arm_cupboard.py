@@ -210,6 +210,29 @@ env_pred = HumanArmCupboardsOpenAll(
     arm_action_mode="scripted",
     control_frequency=50,); env_pred.reset()
 
+
+def geom_ids_with_prefix(model, prefix: str):
+    ids = set()
+    for gid in range(model.ngeom):
+        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
+        if name.startswith(prefix):
+            ids.add(gid)
+    return ids
+
+phys_pred = env_pred.mojo.physics
+m_pred = phys_pred.model.ptr
+
+robot_ids_pred = geom_ids_with_prefix(m_pred, "h1/")            # robot geoms
+human_ids_pred = geom_ids_with_prefix(m_pred, "cylinder_arm/")  # human arm geoms
+
+def has_contact_ids(physics, ids_a, ids_b, dist_margin=0.0):
+    for c in physics.data.contact:
+        if c.dist > dist_margin:
+            continue
+        if (c.geom1 in ids_a and c.geom2 in ids_b) or (c.geom2 in ids_a and c.geom1 in ids_b):
+            return True, float(c.dist)
+    return False, None
+
 def min_geom_distance(model, data, ids_a, ids_b, distmax=0.2):
     # distmax: early-exit threshold (m). Set to your gate/hit threshold.
     frompos = np.zeros(3, dtype=np.float64)
@@ -226,7 +249,7 @@ def min_geom_distance(model, data, ids_a, ids_b, distmax=0.2):
     return best
 
 horizon_s = 0.6  # collision lookahead threshold in seconds
-t = 0
+t = 1500
 paused = False
 last_safe_action = demo.timesteps[0].executed_action.copy()
 PRED_EVERY = 5  # 50Hz / 5 = 10Hz
@@ -268,8 +291,11 @@ while t < n_steps:
         #     tqdm.write(f"[PRED] running lookahead at t={t}")
         #     # only then run expensive lookahead
         copy_state(env, env_pred, buf)
-        will_hit, ttc = will_collide_within(env_pred, horizon_s, proposed, hit_thresh=0.01)
+        # will_hit, ttc = will_collide_within(env_pred, horizon_s, proposed, hit_thresh=0.01)
+        # advance prediction env by 1 env step under proposed action
+        obs_p, r_p, term_p, trunc_p, info_p = env_pred.step(proposed)
 
+        will_hit = has_contact_ids(env_pred.mojo.physics, human_ids_pred, robot_ids_pred, dist_margin=0.0)
         # else:
         #     will_hit = False
             # tqdm.write(f"[PRED] gate blocked at t={t}")
