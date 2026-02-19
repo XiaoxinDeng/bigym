@@ -10,7 +10,7 @@
             <geom type="capsule" rgba="1 0.6 0.6 0.35" density="10" solimp="0.998 0.998 0.001" solref="0.004 1"/>
             <joint damping="2" armature="0.02" solimplimit="0.998 0.998 0.001" solreflimit="0.004 1"/>
             <default class="limb_collision">
-                <geom group="0" contype="2" conaffinity="0"/>
+                <geom group="0" contype="2" conaffinity="1"/>
             </default>
             <default class="vis_collision">
                 <geom group="0" contype="0" conaffinity="0"/>

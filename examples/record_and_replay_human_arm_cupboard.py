@@ -1,3 +1,5 @@
+from posixpath import sep
+
 import imageio
 import numpy as np
 from tqdm import tqdm, trange
@@ -13,9 +15,7 @@ from bigym.const import CACHE_PATH
 from bigym.action_modes import PelvisDof
 import os
 import mujoco
-from mojo.elements import Geom
-from bigym.utils.physics_utils import has_collided_collections
-
+from demo_utils import *
 
 # Get demonstrations from DemoStore In case users do not have demos installed
 demo_store = DemoStore()
@@ -44,154 +44,6 @@ if n_steps is None or n_steps < 1:
 else:
     n_steps = min(n_timesteps, n_steps) # ensure steps in bound
 
-def make_state_buffer(physics):
-    m = physics.model.ptr
-    n = mujoco.mj_stateSize(m, mujoco.mjtState.mjSTATE_FULLPHYSICS)
-    return np.zeros(n, dtype=np.float64)
-
-
-def _snapshot(physics, buf):
-    m = physics.model.ptr
-    d = physics.data.ptr
-    mujoco.mj_getState(m, d, buf, mujoco.mjtState.mjSTATE_FULLPHYSICS)
-
-def _restore(physics, buf):
-    m = physics.model.ptr
-    d = physics.data.ptr
-    mujoco.mj_setState(m, d, buf, mujoco.mjtState.mjSTATE_FULLPHYSICS)
-    mujoco.mj_forward(m, d)
-
-def copy_state(env_src, env_dst, buf):
-    # MuJoCo arrays
-    _snapshot(env_src.mojo.physics, buf)
-    _restore(env_dst.mojo.physics, buf)
-
-    # Human script state
-    hs = env_src.humanarms[0]
-    hd = env_dst.humanarms[0]
-    hd._CURRENT_TIME = hs._CURRENT_TIME
-    hd._qpos_target[:] = hs._qpos_target
-    hd._ctrl_target[:] = hs._ctrl_target
-
-    # Floating-base controller buffers (BiGym-specific)
-    fbs = env_src.robot.floating_base
-    fbd = env_dst.robot.floating_base
-    if fbs is not None and fbd is not None:
-        fbd._accumulated_actions[:] = fbs._accumulated_actions
-        fbd._last_action[:] = fbs._last_action
-
-
-def _robot_colliders(env):
-    geoms = []
-    for geom_mjcf in env.robot._body.mjcf.find_all("geom"):
-        g = Geom(env.mojo, geom_mjcf)
-        if g.is_collidable():
-            geoms.append(g)
-    return geoms
-
-def _has_penetration(physics, colliders_1, colliders_2, pen_eps=0.0):
-    ids_1 = set(physics.bind([c.mjcf for c in colliders_1]).element_id)
-    ids_2 = set(physics.bind([c.mjcf for c in colliders_2]).element_id)
-    for c in physics.data.contact:
-        if c.dist > pen_eps:
-            continue
-        if ((c.geom1 in ids_1 and c.geom2 in ids_2) or
-            (c.geom2 in ids_1 and c.geom1 in ids_2)):
-            return True
-    return False
-
-
-def _has_collision(physics, colliders_1, colliders_2, margin=0.001):
-    if margin is None:
-        return has_collided_collections(physics, colliders_1, colliders_2)
-    ids_1 = set(physics.bind([c.mjcf for c in colliders_1]).element_id)
-    ids_2 = set(physics.bind([c.mjcf for c in colliders_2]).element_id)
-    for contact in physics.data.contact:
-        if contact.dist > margin:
-            continue
-        if (contact.geom1 in ids_1 and contact.geom2 in ids_2) or (
-            contact.geom2 in ids_1 and contact.geom1 in ids_2
-        ):
-            return True
-    return False
-
-def freeze_human_if_contact(env, robot_colliders):
-    human = env.humanarms[0]
-    if _has_penetration(env.mojo.physics, human.colliders, robot_colliders, pen_eps=0.0):
-        human._CURRENT_TIME -= env.get_dt()
-        return True
-    return False
-
-def geom_ids_from_colliders(physics, colliders):
-    # element_id for geoms in dm_control bind
-    ids = np.array(physics.bind([c.mjcf for c in colliders]).element_id, dtype=np.int32)
-    return np.unique(ids)
-
-
-
-
-def will_collide_within(env_pred, horizon_s, action, hit_thresh=0.01, step_dt=None):
-    physics = env_pred.mojo.physics
-    m = physics.model.ptr
-    d = physics.data.ptr
-    human = env_pred.humanarms[0]
-
-    step_dt = float(step_dt or env_pred.get_dt())
-    sub_steps = env_pred._sub_steps_count
-    steps = int(np.ceil(horizon_s / step_dt))
-
-    # early check
-    dist0 = min_geom_distance(m, d, human_geom_ids_pred, robot_geom_ids_pred, distmax=hit_thresh)
-    if dist0 < hit_thresh:
-        return True, 0.0
-
-    for i in range(steps):
-        human._on_step(step_dt)
-        mujoco.mj_forward(m, d)
-
-        env_pred.action_mode.step(action)
-        for _ in range(sub_steps - 1):
-            env_pred.mojo.step()
-
-        dist = min_geom_distance(m, d, human_geom_ids_pred, robot_geom_ids_pred, distmax=hit_thresh)
-        if dist < hit_thresh:
-            return True, (i + 1) * step_dt
-
-    return False, None
-
-
-
-def get_dof_ids(env):
-    m = env.mojo.physics.model.ptr
-    pelvis = [
-        mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/pelvis_x"),
-        mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/pelvis_y"),
-        mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/pelvis_z"),
-        mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/pelvis_rz"),
-    ]
-    pelvis_dofs = [int(m.jnt_dofadr[j]) for j in pelvis]
-
-    fb_j = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/h1_floating_base/h1_floating_base")
-    fb_dof = int(m.jnt_dofadr[fb_j])
-
-    return pelvis_dofs, [fb_dof]
-
-def set_resistance(env, dof_ids, damping=None, frictionloss=None):
-    m = env.mojo.physics.model.ptr
-    if damping is not None:
-        m.dof_damping[dof_ids] = damping
-    if frictionloss is not None:
-        m.dof_frictionloss[dof_ids] = frictionloss
-def min_contact_dist(physics, colliders_1, colliders_2):
-    ids_1 = set(physics.bind([c.mjcf for c in colliders_1]).element_id)
-    ids_2 = set(physics.bind([c.mjcf for c in colliders_2]).element_id)
-    md = None
-    for c in physics.data.contact:
-        if ((c.geom1 in ids_1 and c.geom2 in ids_2) or
-            (c.geom2 in ids_1 and c.geom1 in ids_2)):
-            md = c.dist if md is None else min(md, c.dist)
-    return md
-
 
 env = HumanArmCupboardsOpenAll(
     action_mode=JointPositionActionMode(floating_base=True, 
@@ -211,116 +63,130 @@ env_pred = HumanArmCupboardsOpenAll(
     control_frequency=50,); env_pred.reset()
 
 
-def geom_ids_with_prefix(model, prefix: str):
-    ids = set()
-    for gid in range(model.ngeom):
-        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
-        if name.startswith(prefix):
-            ids.add(gid)
-    return ids
-
 phys_pred = env_pred.mojo.physics
 m_pred = phys_pred.model.ptr
-
-robot_ids_pred = geom_ids_with_prefix(m_pred, "h1/")            # robot geoms
-human_ids_pred = geom_ids_with_prefix(m_pred, "cylinder_arm/")  # human arm geoms
-
-def has_contact_ids(physics, ids_a, ids_b, dist_margin=0.0):
-    for c in physics.data.contact:
-        if c.dist > dist_margin:
-            continue
-        if (c.geom1 in ids_a and c.geom2 in ids_b) or (c.geom2 in ids_a and c.geom1 in ids_b):
-            return True, float(c.dist)
-    return False, None
-
-def min_geom_distance(model, data, ids_a, ids_b, distmax=0.2):
-    # distmax: early-exit threshold (m). Set to your gate/hit threshold.
-    frompos = np.zeros(3, dtype=np.float64)
-    topos   = np.zeros(3, dtype=np.float64)
-    best = distmax
-    for ga in ids_a:
-        for gb in ids_b:
-            # MuJoCo C API: mj_geomDistance(m,d,ga,gb,distmax,frompos,topos) -> distance
-            dist = mujoco.mj_geomDistance(model, data, int(ga), int(gb), best, frompos, topos)
-            if dist < best:
-                best = float(dist)
-                if best <= 0.0:   # penetration
-                    return best
-    return best
-
-horizon_s = 0.6  # collision lookahead threshold in seconds
-t = 1500
-paused = False
-last_safe_action = demo.timesteps[0].executed_action.copy()
-PRED_EVERY = 5  # 50Hz / 5 = 10Hz
-buf = make_state_buffer(env.mojo.physics)
-robot_colliders = _robot_colliders(env)
-robot_colliders_pred = _robot_colliders(env_pred)
-pbar = tqdm(total=n_steps, desc="Replaying demo", dynamic_ncols=True)
-HIT_MARGIN = 0.1
-
-human_geom_ids      = geom_ids_from_colliders(env.mojo.physics, env.humanarms[0].colliders)
-robot_geom_ids      = geom_ids_from_colliders(env.mojo.physics, robot_colliders)
-human_geom_ids_pred = geom_ids_from_colliders(env_pred.mojo.physics, env_pred.humanarms[0].colliders)
-robot_geom_ids_pred = geom_ids_from_colliders(env_pred.mojo.physics, robot_colliders_pred)
-
-HIT_THRESH = 0.01  # 1cm "about to touch" (tune down later)
-NEAR_THRESH = 0.15  # 15cm gate (start generous)
 m = env.mojo.physics.model.ptr
 d = env.mojo.physics.data.ptr
-near_dist = min_geom_distance(m, d, human_geom_ids, robot_geom_ids, distmax=NEAR_THRESH)
-near = near_dist < NEAR_THRESH
 
-# Make human arm geoms non-collidable with robot
-# human = env.humanarms[0]
-# for g in human.colliders:
-#     mj = g.mjcf
-#     mj.contype = 0
-#     mj.conaffinity = 0
+
+PAUSE_DIST = 0.01 # pause if within the distance (positive allowed)
+RESUME_DIST = 0.06 # resume only if >6cm
+COLLISION_MARGIN = 0.06  # must be >= RESUME_DIST; margin for contact-based pausing (meters, roughly human fingertip thickness)
+MAX_PAUSE_STEPS = 500 # np.inf  # safety valve against infinite deadlock
+RESUME_DWELL = 15   # must be safe for 15 checks (e.g. 15 * PRED_EVERY/50 sec)
+RAMP_STEPS = 50         # e.g. 20 ramp steps @ 50Hz = 0.4s
+PRED_EVERY = 5  # 50Hz / 5 = 10Hz
+
+t = 0
+demo_t = t
+safe_count = 0
+ramp_k = RAMP_STEPS      # "not ramping" initially
+paused = False
+pause_steps = 0
+prev_paused = False
+resume_from_action = None  # for smooth ramping when leaving pause
+last_safe_action = demo.timesteps[0].executed_action.copy()
+buf = make_state_buffer(env.mojo.physics)
+pbar = tqdm(total=n_steps, initial=t, desc="Replaying demo", dynamic_ncols=True)
+
+robot_ids_pred = collidable_ids_with_prefix(m_pred, "h1/")  # collidable robot geoms (exclude non-collidable markers)
+human_ids_pred = get_arm_geo_ids(m_pred)  # human arm geoms
+hl = GeomHighlighter(env.mojo.physics, visible_group=2, env=env, env_pred=env_pred)
+
+set_margins_for_sets(env_pred.mojo.physics, robot_ids_pred, margin=COLLISION_MARGIN)
+set_margins_for_sets(env_pred.mojo.physics, human_ids_pred, margin=COLLISION_MARGIN)
 
 while t < n_steps:
-    timestep = demo.timesteps[t]
+    timestep = demo.timesteps[demo_t]
     proposed = timestep.executed_action.copy()
     will_hit = False
     ttc = None
 
-    # test collision on the proposed action
+    # >>> Collision check <<<
     if t % PRED_EVERY == 0 or paused:
-        # near = _has_collision(env.mojo.physics, env.humanarms[0].colliders, robot_colliders, margin=0.10)  # 2cm proximity
-        # if near:
-        #     tqdm.write(f"[PRED] running lookahead at t={t}")
-        #     # only then run expensive lookahead
         copy_state(env, env_pred, buf)
-        # will_hit, ttc = will_collide_within(env_pred, horizon_s, proposed, hit_thresh=0.01)
-        # advance prediction env by 1 env step under proposed action
-        obs_p, r_p, term_p, trunc_p, info_p = env_pred.step(proposed)
+        _ = env_pred.step(proposed)
+        
+        # contact-based (stable when touching)
+        c_hit, cdist, cg1, cg2 = pair_min_contact_dist_between_sets(
+            phys_pred, human_ids_pred, robot_ids_pred, dist_max=COLLISION_MARGIN  # use margin value
+        )
+       
+        # pause condition: either actually touching OR too close
+        pause_now = c_hit or (cdist < PAUSE_DIST)
 
-        will_hit = has_contact_ids(env_pred.mojo.physics, human_ids_pred, robot_ids_pred, dist_margin=0.0)
-        # else:
-        #     will_hit = False
-            # tqdm.write(f"[PRED] gate blocked at t={t}")
+        # resume condition: no contact AND far enough (with dwell)
+        resume_ok = (not c_hit) and (cdist > RESUME_DIST)
 
-    if will_hit:
-        paused = True
-        tqdm.write(f"[PAUSE] t={t}, ttc={ttc}")
-    else:
-        paused = False
-        last_safe_action = proposed  # only update when safe
+        if not paused and pause_now:
+            paused = True
+            safe_count = 0
+            # choose highlight ids (prefer contact pair if available)
+            if cg1 != -1:
+                name1 = mujoco.mj_id2name(m_pred, mujoco.mjtObj.mjOBJ_GEOM, cg1) or ""
+                name2 = mujoco.mj_id2name(m_pred, mujoco.mjtObj.mjOBJ_GEOM, cg2) or ""
+            tqdm.write(f"[PAUSE] t={t} c_hit={c_hit} cdist={cdist} {name1} <-> {name2}")
 
-    # If paused, KEEP executing last_safe_action (do not zero base)
-    action = last_safe_action if paused else proposed
+        elif paused:
+            if resume_ok:
+                safe_count += 1
+            else:
+                safe_count = 0
 
-    obs, reward, termination, truncation, info = env.step(action)
+            if safe_count >= RESUME_DWELL:
+                paused = False
+                safe_count = 0
+                tqdm.write(f"[RESUME] t={t} cdist={cdist:.4f}")
 
+    # >>> Choose action <<<
+    # When paused, we could hold the last action
     if paused:
-        # freeze human if actually penetrating (keep pen-based check!)
-        freeze_human_if_contact(env, robot_colliders)
+        
+        # highlight the pair in the *rendered* env
+        hl.highlight_pred_contact_pair(cg1, cg2, rgba=(1, 0, 0, 1), highlight_body_visual=True)     # red
+        # action = last_safe_action.copy()
+        action = make_pause_hold_action(env, last_sent_action=last_safe_action)   # <-- hard stop at current pose
+        zero_floating_base_velocity(env)  
 
         # stay on the same demo timestep until safe again
-        continue
+        pause_steps += 1
+        ramp_k = RAMP_STEPS  # reset ramp state
+        resume_from_action = last_safe_action.copy()
+        if pause_steps > MAX_PAUSE_STEPS:
+            paused = False
+            pause_steps = 0
+            tqdm.write(f"[FORCE RESUME] t={t} after {MAX_PAUSE_STEPS} pause steps")
+    # when leaving pause, do a smooth ramping back to the proposed action instead of an instant jump
+    else:
+        hl.clear()
+
+        # If we JUST resumed this step, initialize the ramp ONCE
+        if prev_paused:
+            ramp_k = 0
+            # IMPORTANT: ramp starts from the command we were holding during pause
+            if resume_from_action is None:
+                resume_from_action = last_safe_action.copy()
+
+        # Decide what action to send (ramp or direct)
+        if ramp_k < RAMP_STEPS:
+            alpha = (ramp_k + 1) / RAMP_STEPS
+            action = (1 - alpha) * resume_from_action + alpha * proposed
+            ramp_k += 1
+        else:
+            action = proposed.copy()
+        
+        # Advance demo index ONLY when not paused
+        demo_t += 1
+        last_safe_action = action.copy()   # <-- store what you ACTUALLY sent, not proposed
+        pause_steps = 0
+
+    
+    obs, reward, termination, truncation, info = env.step(action)
 
     # only advance demo time when not paused
     t += 1
+    prev_paused = paused
+
     pbar.update(1)   # update only when timestep advances
 
     # Optional: show extra info
