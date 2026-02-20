@@ -51,7 +51,7 @@ class _HumanArmCupboardsInteractionEnv(BiGymEnv, ABC):
             self.cabinet_door_right,
             self.cabinet_wall,
         ]
-        self.humanarms = [HumanArm(self._mojo, kinematic=True) for _ in range(self._HUMAN_COUNT)]
+        self.humanarms : list[HumanArm] = [HumanArm(self._mojo, kinematic=True) for _ in range(self._HUMAN_COUNT)]
         for human in self.humanarms:
             human.set_mode(self.arm_action_mode)
         self.arm_cmd = np.zeros(3) # radians
@@ -93,6 +93,12 @@ class _HumanArmCupboardsInteractionEnv(BiGymEnv, ABC):
                 self.truncate,
                 self.get_info(),
             )
+
+    def _get_task_privileged_obs(self) -> dict[str, Any]:
+        return {
+            "human_arm_qpos": np.concatenate([human.get_state()['qpos'] for human in self.humanarms], dtype=np.float32),
+            "human_arm_qvel": np.concatenate([human.get_state()['qvel'] for human in self.humanarms], dtype=np.float32),
+        }
         
 
     def _on_step(self, arm_action:np.ndarray=None):

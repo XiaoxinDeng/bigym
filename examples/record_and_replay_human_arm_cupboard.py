@@ -4,18 +4,18 @@ import imageio
 import numpy as np
 from tqdm import tqdm, trange
 from bigym.action_modes import JointPositionActionMode
-from bigym.envs.cupboards_with_human_arm import _HumanArmCupboardsInteractionEnv, HumanArmCupboardsOpenAll
-from bigym.envs.cupboards import CupboardsOpenAll
-from demonstrations.utils import Metadata
+from bigym.envs.cupboards_with_human_arm import HumanArmCupboardsOpenAll
 from demonstrations.demo_store import DemoStore
-from demonstrations.demo_player import DemoPlayer
 from demonstrations.demo import Demo
-from demonstrations.demo_converter import DemoConverter
 from bigym.const import CACHE_PATH
 from bigym.action_modes import PelvisDof
 import os
 import mujoco
 from demo_utils import *
+from demo_utils import GeomHighlighter
+from demonstrations.demo_recorder import DemoRecorder
+from bigym.utils.observation_config import ObservationConfig
+from bigym.utils.observation_config import ObservationConfig, CameraConfig
 
 # Get demonstrations from DemoStore In case users do not have demos installed
 demo_store = DemoStore()
@@ -27,9 +27,11 @@ files = os.listdir(os.path.join(filedir, filedir2))
 filename = os.path.join(filedir, filedir2, files[0])
 assert os.path.exists(filename), f"Demo path invalid: {filename} "
 demo = Demo.from_safetensors(filename)
+save_dir = os.path.join("HumanArm", "HumanArmCupboardsOpenAll", filedir2)
+os.makedirs(save_dir, exist_ok=True)
 
 # Set variables
-n_steps = 3000
+n_steps = None
 render = True
 writer = imageio.get_writer("human_cupboard_demo.mp4", fps=30)
 control_frequency = 50
@@ -44,11 +46,42 @@ if n_steps is None or n_steps < 1:
 else:
     n_steps = min(n_timesteps, n_steps) # ensure steps in bound
 
+observation_config = ObservationConfig(
+    cameras=[
+            CameraConfig(
+                name="right_wrist",
+                rgb=True,
+                depth=False,
+                resolution=(128, 128),
+            ),
+            CameraConfig(
+                name="left_wrist",
+                rgb=True,
+                depth=False,
+                resolution=(128, 128),
+            ),
+            CameraConfig(
+                name="head",
+                rgb=True,
+                depth=False,
+                resolution=(128, 128),
+            ),
+            CameraConfig(
+                name="external",
+                rgb=True,
+                depth=False,
+                resolution=(128, 128),
+            ),
+       ],
+    proprioception=True,
+    privileged_information=True,
+)
 
 env = HumanArmCupboardsOpenAll(
     action_mode=JointPositionActionMode(floating_base=True, 
                                         absolute=True, 
                                         floating_dofs=[PelvisDof.X, PelvisDof.Y, PelvisDof.Z, PelvisDof.RZ]),
+    observation_config=observation_config,
     render_mode="rgb_array",
     arm_action_mode="scripted",
     control_frequency=50,
@@ -56,12 +89,14 @@ env = HumanArmCupboardsOpenAll(
 
 env_pred = HumanArmCupboardsOpenAll(
     action_mode=JointPositionActionMode(floating_base=True, 
-    absolute=True, 
-    floating_dofs=[PelvisDof.X, PelvisDof.Y, PelvisDof.Z, PelvisDof.RZ]),
+                                        absolute=True, 
+                                        floating_dofs=[PelvisDof.X, PelvisDof.Y, PelvisDof.Z, PelvisDof.RZ]),
     render_mode="rgb_array",
     arm_action_mode="scripted",
     control_frequency=50,); env_pred.reset()
 
+recorder = DemoRecorder(save_dir)
+recorder.record(env, lightweight_demo=True)
 
 phys_pred = env_pred.mojo.physics
 m_pred = phys_pred.model.ptr
@@ -181,12 +216,13 @@ while t < n_steps:
         pause_steps = 0
 
     
-    obs, reward, termination, truncation, info = env.step(action)
+    output_timestep = env.step(action)
+    recorder.add_timestep(output_timestep, action)
 
     # only advance demo time when not paused
     t += 1
     prev_paused = paused
-
+    
     pbar.update(1)   # update only when timestep advances
 
     # Optional: show extra info
@@ -200,6 +236,8 @@ while t < n_steps:
         writer.append_data(frame)
         next_frame_t += frame_dt
 
+recorder.save_demo()
+recorder.stop()
 writer.close()
 env.close()
 

@@ -1,7 +1,6 @@
 
 import mujoco
 import numpy as np
-from mojo.elements import Geom
 
 def make_state_buffer(physics):
     m = physics.model.ptr
@@ -39,15 +38,6 @@ def copy_state(env_src, env_dst, buf):
         fbd._accumulated_actions[:] = fbs._accumulated_actions
         fbd._last_action[:] = fbs._last_action
 
-
-def get_robot_colliders(env):
-    geoms = []
-    for geom_mjcf in env.robot._body.mjcf.find_all("geom"):
-        g = Geom(env.mojo, geom_mjcf)
-        if g.is_collidable():
-            geoms.append(g)
-    return geoms
-
 def _has_penetration(physics, colliders_1, colliders_2, pen_eps=0.0):
     ids_1 = set(physics.bind([c.mjcf for c in colliders_1]).element_id)
     ids_2 = set(physics.bind([c.mjcf for c in colliders_2]).element_id)
@@ -59,32 +49,6 @@ def _has_penetration(physics, colliders_1, colliders_2, pen_eps=0.0):
             return True
     return False
 
-def get_hold_action_from_state(env):
-    """
-    Construct an action that holds the robot at its *current* state.
-    This assumes the action is absolute joint positions (+ floating dofs if enabled)
-    in the same order as env.action_mode expects.
-    """
-    # Most BiGym action modes expose a method to get the current action or target.
-    # If yours has it, use it (preferred).
-    if hasattr(env.action_mode, "get_action"):
-        return env.action_mode.get_action()
-
-    # Fallback: use qpos slices. You MUST match action ordering used by JointPositionActionMode.
-    # If your action_mode exposes indices, use them.
-    m = env.mojo.physics.model.ptr
-    d = env.mojo.physics.data.ptr
-
-    # Example: if action is exactly actuator joint positions, you can map joint names.
-    # Replace with your env's joint list / mapping if available.
-    joint_names = env.robot.joint_names  # if exists
-    q = []
-    for jn in joint_names:
-        jid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, jn)
-        qadr = int(m.jnt_qposadr[jid])
-        q.append(float(d.qpos[qadr]))
-    return np.array(q, dtype=np.float32)
-
 
 def freeze_human_if_contact(env, robot_colliders):
     human = env.humanarms[0]
@@ -93,140 +57,7 @@ def freeze_human_if_contact(env, robot_colliders):
         return True
     return False
 
-def geom_ids_from_colliders(physics, colliders):
-    # element_id for geoms in dm_control bind
-    ids = np.array(physics.bind([c.mjcf for c in colliders]).element_id, dtype=np.int32)
-    return np.unique(ids)
 
-
-def will_collide_within(env_pred, horizon_s, action, human_geom_ids_pred, robot_geom_ids_pred, hit_thresh=0.01, step_dt=None):
-    physics = env_pred.mojo.physics
-    m = physics.model.ptr
-    d = physics.data.ptr
-    human = env_pred.humanarms[0]
-    collision_t = None
-
-    step_dt = float(step_dt or env_pred.get_dt())
-    sub_steps = env_pred._sub_steps_count
-    steps = int(np.ceil(horizon_s / step_dt))
-
-    # early check
-    dist0 = min_geom_distance(m, d, human_geom_ids_pred, robot_geom_ids_pred, distmax=hit_thresh)
-    if dist0 < hit_thresh:
-        collision_t = 0.0
-        return True, 0.0
-
-    for i in range(steps):
-        human._on_step(step_dt)
-        mujoco.mj_forward(m, d)
-
-        env_pred.action_mode.step(action)
-        for _ in range(sub_steps - 1):
-            env_pred.mojo.step()
-
-        dist = min_geom_distance(m, d, human_geom_ids_pred, robot_geom_ids_pred, distmax=hit_thresh)
-        if dist < hit_thresh:
-            collision_t = (i + 1) * step_dt
-            return True, collision_t
-
-    return False, collision_t
-
-
-def get_dof_ids(env):
-    m = env.mojo.physics.model.ptr
-    pelvis = [
-        mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/pelvis_x"),
-        mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/pelvis_y"),
-        mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/pelvis_z"),
-        mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/pelvis_rz"),
-    ]
-    pelvis_dofs = [int(m.jnt_dofadr[j]) for j in pelvis]
-
-    fb_j = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, "h1/h1_floating_base/h1_floating_base")
-    fb_dof = int(m.jnt_dofadr[fb_j])
-
-    return pelvis_dofs, [fb_dof]
-
-def set_resistance(env, dof_ids, damping=None, frictionloss=None):
-    m = env.mojo.physics.model.ptr
-    if damping is not None:
-        m.dof_damping[dof_ids] = damping
-    if frictionloss is not None:
-        m.dof_frictionloss[dof_ids] = frictionloss
-
-def min_contact_dist(physics, colliders_1, colliders_2):
-    ids_1 = set(physics.bind([c.mjcf for c in colliders_1]).element_id)
-    ids_2 = set(physics.bind([c.mjcf for c in colliders_2]).element_id)
-    md = None
-    for c in physics.data.contact:
-        if ((c.geom1 in ids_1 and c.geom2 in ids_2) or
-            (c.geom2 in ids_1 and c.geom1 in ids_2)):
-            md = c.dist if md is None else min(md, c.dist)
-    return md
-
-
-def has_contact_ids(physics, ids_a, ids_b, dist_margin=0.0):
-    for c in physics.data.contact:
-        if c.dist > dist_margin:
-            continue
-        if (c.geom1 in ids_a and c.geom2 in ids_b) or (c.geom2 in ids_a and c.geom1 in ids_b):
-            return True, float(c.dist)
-    return False, None
-
-def min_rbound_separation(physics, ids_a, ids_b):
-    """
-    Conservative min separation using MuJoCo geom bounding spheres.
-    Returns: (sep, ga, gb)
-      sep = ||xa - xb|| - (ra + rb)
-      sep > 0  : separated by ~sep meters (lower bound)
-      sep <= 0 : bounding spheres overlap (very close / likely visual intersection)
-    """
-    m = physics.model.ptr
-    d = physics.data.ptr
-
-    best_sep = 1e9
-    best_pair = (-1, -1)
-
-    # Access arrays once
-    xpos = d.geom_xpos          # (ngeom, 3)
-    rbd  = m.geom_rbound        # (ngeom,)
-
-    for ga in ids_a:
-        xa = xpos[ga]
-        ra = rbd[ga]
-        for gb in ids_b:
-            dx = xa - xpos[gb]
-            sep = float(np.linalg.norm(dx) - (ra + rbd[gb]))
-            if sep < best_sep:
-                best_sep = sep
-                best_pair = (ga, gb)
-
-    return best_sep, best_pair[0], best_pair[1]
-
-
-def min_geom_distance(model, data, ids_a, ids_b, distmax=0.2):
-    # distmax: early-exit threshold (m). Set to your gate/hit threshold.
-    frompos = np.zeros(3, dtype=np.float64)
-    topos   = np.zeros(3, dtype=np.float64)
-    best = distmax
-    for ga in ids_a:
-        for gb in ids_b:
-            # MuJoCo C API: mj_geomDistance(m,d,ga,gb,distmax,frompos,topos) -> distance
-            dist = mujoco.mj_geomDistance(model, data, int(ga), int(gb), best, frompos, topos)
-            if dist < best:
-                best = float(dist)
-                if best <= 0.0:   # penetration
-                    return best
-    return best
-
-
-def geom_ids_with_prefix(model, prefix: str):
-    ids = set()
-    for gid in range(model.ngeom):
-        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
-        if name.startswith(prefix):
-            ids.add(gid)
-    return ids
 
 def collidable_ids_with_prefix(model, prefix):
     ids = set()
@@ -240,27 +71,6 @@ def collidable_ids_with_prefix(model, prefix):
             ids.add(gid)
     return ids
 
-
-
-def collision_enabled_pairs(model, ids_a, ids_b):
-    enabled = []
-    for ga in ids_a:
-        ct_a = int(model.geom_contype[ga])
-        ca_a = int(model.geom_conaffinity[ga])
-        if ct_a == 0 and ca_a == 0:
-            continue
-
-        for gb in ids_b:
-            ct_b = int(model.geom_contype[gb])
-            ca_b = int(model.geom_conaffinity[gb])
-            if ct_b == 0 and ca_b == 0:
-                continue
-
-            # MuJoCo mask rule
-            ok = (ct_a & ca_b) != 0 and (ct_b & ca_a) != 0
-            if ok:
-                enabled.append((ga, gb))
-    return enabled
 
 def get_arm_geo_ids(model):
     ids = set()
@@ -298,43 +108,6 @@ def zero_floating_base_velocity(env, jnames = ["h1/pelvis_x", "h1/pelvis_y", "h1
     # Make sure derived quantities are consistent
     mujoco.mj_forward(m, d)
 
-def get_pelvis_qpos(env, jnames = ["h1/pelvis_x", "h1/pelvis_y", "h1/pelvis_z", "h1/pelvis_rz"]):
-    phys = env.mojo.physics
-    m = phys.model.ptr
-    d = phys.data.ptr
-    vals = []
-    for jn in jnames:
-        jid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, jn)
-        qadr = int(m.jnt_qposadr[jid])
-        vals.append(float(d.qpos[qadr]))
-    return np.array(vals, dtype=np.float64)
-
-
-def has_contact_ids(physics, ids_a, ids_b, dist_margin=0.0):
-    """True if MuJoCo generated a contact between sets (optionally allow small positive margin)."""
-    d = physics.data.ptr
-    for i in range(d.ncon):
-        c = d.contact[i]
-        if c.dist > dist_margin:
-            continue
-        if (c.geom1 in ids_a and c.geom2 in ids_b) or (c.geom2 in ids_a and c.geom1 in ids_b):
-            return True, float(c.dist), int(c.geom1), int(c.geom2)
-    return False, None, -1, -1
-
-
-def should_pause(phys_pred, human_ids, robot_ids,
-                 broad_gate=-0.01,   # rbound overlap gate (negative)
-                 contact_margin=0.002 # treat within 2mm as "contact"
-                ):
-    # Broad-phase: cheap, may false positive
-    sep, ga, gb = min_rbound_separation(phys_pred, human_ids, robot_ids)
-
-    if sep > broad_gate:
-        return False, sep, None, ga, gb  # far enough => no pause
-
-    # Narrow-phase: authoritative (contacts)
-    hit, cdist, cg1, cg2 = has_contact_ids(phys_pred, human_ids, robot_ids, dist_margin=contact_margin)
-    return hit, sep, cdist, cg1, cg2
 
 def clamp_to_action_space(env, a):
     return np.clip(a, env.action_space.low, env.action_space.high)
