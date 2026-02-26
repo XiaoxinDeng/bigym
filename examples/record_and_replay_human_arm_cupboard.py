@@ -33,7 +33,9 @@ os.makedirs(save_dir, exist_ok=True)
 # Set variables
 n_steps = None
 render = True
-writer = imageio.get_writer("human_cupboard_demo.mp4", fps=30)
+write_demo_video = False
+if write_demo_video:
+    writer = imageio.get_writer("human_cupboard_demo.mp4", fps=30)
 control_frequency = 50
 
 fps = 30
@@ -230,7 +232,7 @@ while t < n_steps:
 
     # Write frame in simulation time
     sim_t += env.get_dt()  # env_dt = opt.timestep * substeps
-    if sim_t >= next_frame_t:
+    if sim_t >= next_frame_t and write_demo_video:
         frame = env.render()
         if frame is None: raise RuntimeError("env.render() returned None; use direct MuJoCo rendering.")
         writer.append_data(frame)
@@ -238,6 +240,7 @@ while t < n_steps:
 
 recorder.save_demo()
 recorder.stop()
-writer.close()
+if write_demo_video:
+    writer.close()
 env.close()
 
