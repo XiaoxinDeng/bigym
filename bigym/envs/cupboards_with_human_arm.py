@@ -2,6 +2,7 @@
 from abc import ABC
 
 import numpy as np
+from gymnasium import spaces
 
 from bigym.bigym_env import BiGymEnv, CONTROL_FREQUENCY_MAX
 from bigym.const import PRESETS_PATH
@@ -98,6 +99,24 @@ class _HumanArmCupboardsInteractionEnv(BiGymEnv, ABC):
         return {
             "human_arm_qpos": np.concatenate([human.get_state()['qpos'] for human in self.humanarms], dtype=np.float32),
             "human_arm_qvel": np.concatenate([human.get_state()['qvel'] for human in self.humanarms], dtype=np.float32),
+        }
+
+    def _get_task_privileged_obs_space(self) -> dict[str, Any]:
+        num_human_qpos = sum(len(human.get_state()["qpos"]) for human in self.humanarms)
+        num_human_qvel = sum(len(human.get_state()["qvel"]) for human in self.humanarms)
+        return {
+            "human_arm_qpos": spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(num_human_qpos,),
+                dtype=np.float32,
+            ),
+            "human_arm_qvel": spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(num_human_qvel,),
+                dtype=np.float32,
+            ),
         }
         
 
