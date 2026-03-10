@@ -31,9 +31,10 @@ save_dir = os.path.join("HumanArm", "HumanArmCupboardsOpenAll", filedir2)
 os.makedirs(save_dir, exist_ok=True)
 
 # Set variables
-n_steps = None
+n_steps = 3000
 render = True
-write_demo_video = False
+write_demo_video = True
+save_demo_to_disk = False
 if write_demo_video:
     writer = imageio.get_writer("human_cupboard_demo.mp4", fps=30)
 control_frequency = 50
@@ -88,6 +89,7 @@ env = HumanArmCupboardsOpenAll(
     arm_action_mode="scripted",
     control_frequency=50,
 ); env.reset()
+disable_arm_collisions(env.mojo.physics)
 
 env_pred = HumanArmCupboardsOpenAll(
     action_mode=JointPositionActionMode(floating_base=True, 
@@ -98,7 +100,8 @@ env_pred = HumanArmCupboardsOpenAll(
     control_frequency=50,); env_pred.reset()
 
 recorder = DemoRecorder(save_dir)
-recorder.record(env, lightweight_demo=True)
+if save_demo_to_disk:
+    recorder.record(env, lightweight_demo=True)
 
 phys_pred = env_pred.mojo.physics
 m_pred = phys_pred.model.ptr
@@ -106,13 +109,16 @@ m = env.mojo.physics.model.ptr
 d = env.mojo.physics.data.ptr
 
 
-PAUSE_DIST = 0.01 # pause if within the distance (positive allowed)
-RESUME_DIST = 0.06 # resume only if >6cm
-COLLISION_MARGIN = 0.06  # must be >= RESUME_DIST; margin for contact-based pausing (meters, roughly human fingertip thickness)
-MAX_PAUSE_STEPS = 500 # np.inf  # safety valve against infinite deadlock
+PAUSE_DIST = 0.05 # pause if within the distance (positive allowed)
+RESUME_DIST = 0.07 # resume only if >6cm
+COLLISION_MARGIN = 0.08  # must be >= RESUME_DIST; margin for contact-based pausing (meters, roughly human fingertip thickness)
+MAX_PAUSE_STEPS = np.inf # np.inf  # safety valve against infinite deadlock
 RESUME_DWELL = 15   # must be safe for 15 checks (e.g. 15 * PRED_EVERY/50 sec)
 RAMP_STEPS = 50         # e.g. 20 ramp steps @ 50Hz = 0.4s
 PRED_EVERY = 5  # 50Hz / 5 = 10Hz
+PRED_EVERY_FAR = 5
+PRED_EVERY_NEAR = 1
+NEAR_DIST = 0.10  # if within 10 cm, check every step
 
 t = 0
 demo_t = t
@@ -129,9 +135,23 @@ pbar = tqdm(total=n_steps, initial=t, desc="Replaying demo", dynamic_ncols=True)
 robot_ids_pred = collidable_ids_with_prefix(m_pred, "h1/")  # collidable robot geoms (exclude non-collidable markers)
 human_ids_pred = get_arm_geo_ids(m_pred)  # human arm geoms
 hl = GeomHighlighter(env.mojo.physics, visible_group=2, env=env, env_pred=env_pred)
+action_joint_jids = build_action_joint_mapping_from_ranges(env, prefix="h1/", start_dim=4, end_dim=14)
 
 set_margins_for_sets(env_pred.mojo.physics, robot_ids_pred, margin=COLLISION_MARGIN)
 set_margins_for_sets(env_pred.mojo.physics, human_ids_pred, margin=COLLISION_MARGIN)
+
+
+# -------------------------
+# Fixed replay while-loop
+# - While paused: shadow env follows the SAME "hold" control as real env (prevents shadow penetration/instability)
+# - Resume decision uses:
+#   (A) clearance in shadow under HOLD (matches reality during pause)
+#   (B) optional short lookahead with PROPOSED only when about to resume
+# -------------------------
+print("action_dim:", env.action_space.shape[0])
+print("action_mode type:", type(env.action_mode))
+
+LOOKAHEAD_H = 5  # steps of lookahead with proposed when considering resume (e.g., 5 @ 50Hz = 0.1s)
 
 while t < n_steps:
     timestep = demo.timesteps[demo_t]
@@ -139,107 +159,142 @@ while t < n_steps:
     will_hit = False
     ttc = None
 
-    # >>> Collision check <<<
-    if t % PRED_EVERY == 0 or paused:
+    # ---------- Collision check / pause-resume logic ----------
+    pred_every = PRED_EVERY_NEAR if paused else PRED_EVERY_FAR
+    if (t % pred_every == 0) or paused:
+        # Keep env_pred synchronized with env
         copy_state(env, env_pred, buf)
-        _ = env_pred.step(proposed)
-        
-        # contact-based (stable when touching)
+
+        # 1) Step env_pred with the SAME action that env will take right now
+        if paused:
+            pred_action_now = make_pause_hold_action_hybrid(env_pred, action_joint_jids, last_safe_action)
+            pred_action_now = clamp_action(env_pred, pred_action_now)
+            _ = env_pred.step(pred_action_now)
+            zero_floating_base_velocity(env_pred)
+        else:
+            proposed = clamp_action(env_pred, proposed)
+            _ = env_pred.step(proposed)
+
+        # 2) Compute contact/dist in env_pred after that step
         c_hit, cdist, cg1, cg2 = pair_min_contact_dist_between_sets(
-            phys_pred, human_ids_pred, robot_ids_pred, dist_max=COLLISION_MARGIN  # use margin value
+            phys_pred, human_ids_pred, robot_ids_pred, dist_max=COLLISION_MARGIN
         )
-       
-        # pause condition: either actually touching OR too close
+
         pause_now = c_hit or (cdist < PAUSE_DIST)
+        resume_clear = (not c_hit) and (cdist > RESUME_DIST)
 
-        # resume condition: no contact AND far enough (with dwell)
-        resume_ok = (not c_hit) and (cdist > RESUME_DIST)
-
+        # Transition into pause
         if not paused and pause_now:
             paused = True
             safe_count = 0
-            # choose highlight ids (prefer contact pair if available)
+            ramp_k = RAMP_STEPS
+            resume_from_action = last_safe_action.copy()
+            pause_steps = 0
+
+            name1 = name2 = ""
             if cg1 != -1:
-                name1 = mujoco.mj_id2name(m_pred, mujoco.mjtObj.mjOBJ_GEOM, cg1) or ""
-                name2 = mujoco.mj_id2name(m_pred, mujoco.mjtObj.mjOBJ_GEOM, cg2) or ""
-            tqdm.write(f"[PAUSE] t={t} c_hit={c_hit} cdist={cdist} {name1} <-> {name2}")
+                name1 = mujoco.mj_id2name(m_pred, mujoco.mjtObj.mjOBJ_GEOM, int(cg1)) or ""
+                name2 = mujoco.mj_id2name(m_pred, mujoco.mjtObj.mjOBJ_GEOM, int(cg2)) or ""
+            tqdm.write(f"[PAUSE] t={t} c_hit={c_hit} cdist={cdist:.4f} {name1} <-> {name2}")
 
+        # Stay paused: dwell-based clearance, plus OPTIONAL lookahead before resuming
         elif paused:
-            if resume_ok:
-                safe_count += 1
-            else:
-                safe_count = 0
+            safe_count = safe_count + 1 if resume_clear else 0
 
+            # Only consider resuming once we've been clear for long enough
             if safe_count >= RESUME_DWELL:
-                paused = False
-                safe_count = 0
-                tqdm.write(f"[RESUME] t={t} cdist={cdist:.4f}")
+                # 3) Optional lookahead: if we resume, will PROPOSED collide soon?
+                ok = True
+                copy_state(env, env_pred, buf)  # reset shadow back to current real state
 
-    # >>> Choose action <<<
-    # When paused, we could hold the last action
+                # simulate LOOKAHEAD_H steps with proposed (or ramp-start) to test immediate collision risk
+                for _ in range(LOOKAHEAD_H):
+                    proposed = clamp_action(env_pred, proposed)
+                    _ = env_pred.step(proposed)
+                    c_hit2, cdist2, cg1_2, cg2_2 = pair_min_contact_dist_between_sets(
+                        phys_pred, human_ids_pred, robot_ids_pred, dist_max=COLLISION_MARGIN
+                    )
+                    if c_hit2 or (cdist2 < PAUSE_DIST):
+                        ok = False
+                        cg1, cg2 = cg1_2, cg2_2  # for highlighting
+                        break
+
+                if ok:
+                    paused = False
+                    safe_count = 0
+                    pause_steps = 0
+                    tqdm.write(f"[RESUME] t={t} cdist={cdist:.4f}")
+                else:
+                    # remain paused; reset dwell so we require sustained clearance again
+                    safe_count = 0
+
+    # ---------- Choose action to send to the real env ----------
     if paused:
-        
-        # highlight the pair in the *rendered* env
-        hl.highlight_pred_contact_pair(cg1, cg2, rgba=(1, 0, 0, 1), highlight_body_visual=True)     # red
-        # action = last_safe_action.copy()
-        action = make_pause_hold_action(env, last_sent_action=last_safe_action)   # <-- hard stop at current pose
-        zero_floating_base_velocity(env)  
+        # Highlight predicted contact pair (if any)
+        if cg1 != -1:
+            hl.highlight_pred_contact_pair(cg1, cg2, rgba=(1, 0, 0, 1), highlight_body_visual=True)
 
-        # stay on the same demo timestep until safe again
+        # Hard stop at current pose (robot yields; human keeps moving)
+        # TRUE HOLD for hybrid semantics (prevents controller fighting)
+        action = make_pause_hold_action_hybrid(env, action_joint_jids, last_safe_action)
+        zero_floating_base_velocity(env)
+        last_safe_action = action.copy()   # <-- add this
         pause_steps += 1
-        ramp_k = RAMP_STEPS  # reset ramp state
+        ramp_k = RAMP_STEPS
         resume_from_action = last_safe_action.copy()
+
         if pause_steps > MAX_PAUSE_STEPS:
             paused = False
+            safe_count = 0
             pause_steps = 0
             tqdm.write(f"[FORCE RESUME] t={t} after {MAX_PAUSE_STEPS} pause steps")
-    # when leaving pause, do a smooth ramping back to the proposed action instead of an instant jump
+
     else:
         hl.clear()
 
-        # If we JUST resumed this step, initialize the ramp ONCE
+        # If we JUST resumed, initialize ramp ONCE
         if prev_paused:
             ramp_k = 0
-            # IMPORTANT: ramp starts from the command we were holding during pause
             if resume_from_action is None:
                 resume_from_action = last_safe_action.copy()
 
-        # Decide what action to send (ramp or direct)
+        # Ramp back to proposed to avoid a jump
         if ramp_k < RAMP_STEPS:
             alpha = (ramp_k + 1) / RAMP_STEPS
             action = (1 - alpha) * resume_from_action + alpha * proposed
             ramp_k += 1
         else:
             action = proposed.copy()
-        
+
         # Advance demo index ONLY when not paused
         demo_t += 1
-        last_safe_action = action.copy()   # <-- store what you ACTUALLY sent, not proposed
+        last_safe_action = action.copy()
         pause_steps = 0
 
-    
+    # ---------- Step real env ----------
+    action = clamp_action(env, action)
     output_timestep = env.step(action)
-    recorder.add_timestep(output_timestep, action)
+    if save_demo_to_disk:
+        recorder.add_timestep(output_timestep, action)
 
-    # only advance demo time when not paused
+    # Always advance time step counter t (your design: arm moves each env.step)
     t += 1
     prev_paused = paused
-    
-    pbar.update(1)   # update only when timestep advances
 
-    # Optional: show extra info
+    pbar.update(1)
     pbar.set_postfix(paused=paused, ttc=ttc)
 
-    # Write frame in simulation time
-    sim_t += env.get_dt()  # env_dt = opt.timestep * substeps
+    sim_t += env.get_dt()
     if sim_t >= next_frame_t and write_demo_video:
         frame = env.render()
-        if frame is None: raise RuntimeError("env.render() returned None; use direct MuJoCo rendering.")
+        if frame is None:
+            raise RuntimeError("env.render() returned None; use direct MuJoCo rendering.")
         writer.append_data(frame)
         next_frame_t += frame_dt
 
-recorder.save_demo()
-recorder.stop()
+if save_demo_to_disk:
+    recorder.save_demo()
+    recorder.stop()
 if write_demo_video:
     writer.close()
 env.close()

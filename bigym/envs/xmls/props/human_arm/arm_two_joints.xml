@@ -1,16 +1,21 @@
 <mujoco model="cylinder_arm">
 
     <option gravity="0 0 0"/>
-    <equality>
-    <weld name="weld_arm" body1="arm_root" body2="" solref="0.02 1" solimp="0.9 0.95 0.001"/>
-    </equality>
+    <!-- <equality>
+    <weld name="weld_arm" body1="arm_carrier" body2="" solref="0.02 1" solimp="0.9 0.95 0.001"/>
+    </equality> -->
 
     <default>
         <default class="human_arm">
-            <geom type="capsule" rgba="1 0.6 0.6 0.35" density="10" solimp="0.998 0.998 0.001" solref="0.004 1"/>
+            <geom type="capsule" rgba="1 0.6 0.6 0.35" density="10" solref="0.05 1" solimp="0.8 0.9 0.001" friction="0.6 0.1 0.1"/>
             <joint damping="2" armature="0.02" solimplimit="0.998 0.998 0.001" solreflimit="0.004 1"/>
             <default class="limb_collision">
-                <geom group="0" contype="2" conaffinity="1"/>
+                <!-- <geom group="0" contype="2" conaffinity="1"/> -->
+                <geom group="0" contype="2" conaffinity="1"
+                    condim="1"
+                    friction="0 0 0"
+                    solref="0.06 1" solimp="0.7 0.9 0.001"
+                    margin="0.01" gap="0.002"/>
             </default>
             <default class="vis_collision">
                 <geom group="0" contype="0" conaffinity="0"/>
@@ -42,47 +47,54 @@
                 rgba="0 0 1 1"
                 contype="0" conaffinity="0"/>
     </body>
-    <body name="arm_root" pos="0.1 -0.35 1.50" gravcomp="1" childclass="human_arm">
-        <inertial pos="0 0 0" mass="1e-3" diaginertia="1e-6 1e-6 1e-6"/>
-        
-        <!-- whole-arm base rotation (like shoulder/torso swivel) -->
-        <body name="shoulder_base_body" pos="0 0 0">
-            <joint name="arm_shoulder_base" type="hinge" axis="0 0 1" range="-1.57 1.57"/>
-            <geom name="vis_shoulder_base" type="sphere" size="0.03" mass="0.5" rgba="0.2 0.4 1.0 1" class="vis_collision"/>
+    <!-- set initial position here -->
+    <body name="arm_carrier" pos="0.12 -0.4 1.50" gravcomp="1">
+      <!-- planar motion joints -->
+      <joint name="arm_tx" type="slide" axis="1 0 0" range="-2 2"/>
+      <joint name="arm_ty" type="slide" axis="0 1 0" range="-2 2"/>
+
+        <body name="arm_root" pos="0 0 0" gravcomp="1" childclass="human_arm">
+            <inertial pos="0 0 0" mass="1e-3" diaginertia="1e-6 1e-6 1e-6"/>
+            
+            <!-- whole-arm base rotation (like shoulder/torso swivel) -->
+            <body name="shoulder_base_body" pos="0 0 0">
+                <joint name="arm_shoulder_base" type="hinge" axis="0 0 1" range="-1.57 1.57"/>
+                <geom name="vis_shoulder_base" type="sphere" size="0.03" mass="0.5" rgba="0.2 0.4 1.0 1" class="vis_collision"/>
 
 
-            <!-- Shoulder yaw (Blue) -->
-            <body name="shoulder_yaw_body" pos="0 0 0">
-                <joint name="arm_shoulder_yaw" type="hinge" axis="0 0 1"
-                    range="-1.570796 1.570796"/>
-
-                <!-- Mass/inertia carrier for this joint body -->
-                <geom name="vis_shoulder_yaw" type="sphere" size="0.028" mass="1" rgba="0.2 0.4 1.0 1" class="vis_collision"/>
-
-                <!-- Shoulder pitch -->
-                <body name="shoulder_pitch_body" pos="0 0 0">
-                <joint name="arm_shoulder_pitch" type="hinge" axis="0 1 0"
+                <!-- Shoulder yaw (Blue) -->
+                <body name="shoulder_yaw_body" pos="0 0 0">
+                    <joint name="arm_shoulder_yaw" type="hinge" axis="0 0 1"
                         range="-1.570796 1.570796"/>
 
-                <!-- Mass/inertia carrier for this joint body -->
-                <geom name="vis_shoulder_pitch" type="sphere" mass="1" size="0.028" rgba="0.2 0.4 1.0 1" class="vis_collision"/>
+                    <!-- Mass/inertia carrier for this joint body -->
+                    <geom name="vis_shoulder_yaw" type="sphere" size="0.028" mass="1" rgba="0.2 0.4 1.0 1" class="vis_collision"/>
 
-                <!-- Upper arm -->
-                <body name="upperarm" pos="0 0 0">
-                    <geom name="upperarm_geom" type="cylinder" fromto="0 0 0  0 0 -0.34" size="0.035" class="limb_collision"/>
+                    <!-- Shoulder pitch -->
+                    <body name="shoulder_pitch_body" pos="0 0 0">
+                    <joint name="arm_shoulder_pitch" type="hinge" axis="0 1 0"
+                            range="-1.570796 1.570796"/>
 
-                    <!-- Elbow -->
-                    <body name="forearm" pos="0 0 -0.34">
-                        <joint name="arm_elbow" type="hinge" axis="0 1 0" range="0 2.530727"/>
-                        <geom name="forearm_geom" type="cylinder" fromto="0 0 0  0 0 -0.30" size="0.032" class="limb_collision"/>
-                        <!-- Elbow visual (Yellow) -->
-                        <geom name="vis_elbow" type="sphere" size="0.025" rgba="1.0 0.9 0.2 1" class="vis_collision"/>
-                        <!-- Wrist visual (Red) -->
-                        <body name="wrist" pos="0 0 -0.30">
-                            <geom name="vis_wrist" type="sphere" size="0.022" rgba="1.0 0.2 0.2 1" class="vis_collision"/>
+                    <!-- Mass/inertia carrier for this joint body -->
+                    <geom name="vis_shoulder_pitch" type="sphere" mass="1" size="0.028" rgba="0.2 0.4 1.0 1" class="vis_collision"/>
+
+                    <!-- Upper arm -->
+                    <body name="upperarm" pos="0 0 0">
+                        <geom name="upperarm_geom" type="cylinder" fromto="0 0 0  0 0 -0.34" size="0.035" class="limb_collision"/>
+
+                        <!-- Elbow -->
+                        <body name="forearm" pos="0 0 -0.34">
+                            <joint name="arm_elbow" type="hinge" axis="0 1 0" range="0 2.530727"/>
+                            <geom name="forearm_geom" type="cylinder" fromto="0 0 0  0 0 -0.30" size="0.032" class="limb_collision"/>
+                            <!-- Elbow visual (Yellow) -->
+                            <geom name="vis_elbow" type="sphere" size="0.025" rgba="1.0 0.9 0.2 1" class="vis_collision"/>
+                            <!-- Wrist visual (Red) -->
+                            <body name="wrist" pos="0 0 -0.30">
+                                <geom name="vis_wrist" type="sphere" size="0.022" rgba="1.0 0.2 0.2 1" class="vis_collision"/>
+                            </body>
                         </body>
                     </body>
-                </body>
+                    </body>
                 </body>
             </body>
         </body>

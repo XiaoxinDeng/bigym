@@ -19,17 +19,72 @@ def _restore(physics, buf):
     mujoco.mj_setState(m, d, buf, mujoco.mjtState.mjSTATE_FULLPHYSICS)
     mujoco.mj_forward(m, d)
 
+def clamp_action(env, a):
+    a = np.asarray(a, dtype=np.float32)
+    lo = env.action_space.low.astype(np.float32)
+    hi = env.action_space.high.astype(np.float32)
+    return np.minimum(np.maximum(a, lo), hi)
+
+def disable_arm_collisions(physics):
+    m = physics.model.ptr
+    # arm geom names
+    arm_geom_names = ["cylinder_arm/upperarm_geom", "cylinder_arm/forearm_geom"]
+    for name in arm_geom_names:
+        gid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, name)
+        if gid < 0:
+            raise RuntimeError(f"Arm geom not found: {name}")
+        m.geom_contype[gid] = 0
+        m.geom_conaffinity[gid] = 0
+        # optional: zero margin so it doesn't generate margin contacts either
+        m.geom_margin[gid] = 0.0
+
 def copy_state(env_src, env_dst, buf):
-    # MuJoCo arrays
     _snapshot(env_src.mojo.physics, buf)
     _restore(env_dst.mojo.physics, buf)
 
     # Human script state
     hs = env_src.humanarms[0]
     hd = env_dst.humanarms[0]
+
+    # ---- core time/control ----
     hd._CURRENT_TIME = hs._CURRENT_TIME
+    hd._mode = hs._mode
     hd._qpos_target[:] = hs._qpos_target
     hd._ctrl_target[:] = hs._ctrl_target
+
+    # ---- walking state (OU) ----
+    if getattr(hs, "_walk_center_xy", None) is not None:
+        hd._walk_center_xy = hs._walk_center_xy.copy()
+    if getattr(hs, "_walk_xy", None) is not None:
+        hd._walk_xy = hs._walk_xy.copy()
+    if getattr(hs, "_walk_v", None) is not None:
+        hd._walk_v = hs._walk_v.copy()
+
+    # ---- joint smoothing ----
+    if getattr(hs, "_qpos_filt", None) is not None:
+        hd._qpos_filt = hs._qpos_filt.copy()
+
+    # ---- noise state ----
+    hd._next_resample_t = hs._next_resample_t
+    if getattr(hs, "_noise_freqs", None) is not None:
+        hd._noise_freqs = hs._noise_freqs.copy()
+    if getattr(hs, "_noise_phases", None) is not None:
+        hd._noise_phases = hs._noise_phases.copy()
+    if getattr(hs, "_noise_amps", None) is not None:
+        hd._noise_amps = hs._noise_amps.copy()
+
+    # If you use blend variables:
+    if getattr(hs, "_noise_old", None) is not None:
+        hd._noise_old = tuple(x.copy() for x in hs._noise_old)
+    if getattr(hs, "_noise_new", None) is not None:
+        hd._noise_new = tuple(x.copy() for x in hs._noise_new)
+    hd._noise_blend_t0 = getattr(hs, "_noise_blend_t0", 0.0)
+
+    # ---- RNG state (critical for OU) ----
+    if getattr(hs, "_rng", None) is not None:
+        if getattr(hd, "_rng", None) is None:
+            hd._rng = np.random.default_rng()
+        hd._rng.bit_generator.state = hs._rng.bit_generator.state
 
     # Floating-base controller buffers (BiGym-specific)
     fbs = env_src.robot.floating_base
@@ -122,6 +177,93 @@ def make_pause_hold_action(env, last_sent_action):
     a = np.array(last_sent_action, dtype=np.float32).copy()
     a[:4] = 0.0
     return clamp_to_action_space(env, a)
+
+def make_pause_hold_action_hybrid(env, action_joint_jids, last_sent_action):
+    """
+    Hybrid hold for your action definition:
+      - dims 0..3 : floating base deltas -> 0
+      - dims 4..13: absolute joint targets -> current qpos of mapped joints
+      - dims 14..15: gripper -> keep last commanded (or map similarly if needed)
+    """
+    phys = env.mojo.physics
+    m = phys.model.ptr
+    d = phys.data.ptr
+
+    a = np.array(last_sent_action, dtype=np.float32).copy()
+
+    # floating base deltas: hold by sending zero delta
+    a[0:4] = 0.0
+
+    # absolute joint targets: set to CURRENT qpos
+    for i, jid in enumerate(action_joint_jids):
+        dim = 4 + i
+        qadr = int(m.jnt_qposadr[int(jid)])
+        a[dim] = float(d.qpos[qadr])
+
+    # gripper dims (14,15): keep last command (stable)
+    # a[14:16] already from last_sent_action
+
+    return np.clip(a, env.action_space.low, env.action_space.high)
+
+def build_action_joint_mapping_from_ranges(env, prefix="h1/", start_dim=4, end_dim=14, tol=5e-3):
+    """
+    Map action dims [start_dim:end_dim) to MuJoCo hinge/slide joints by matching (low, high)
+    against joint ranges. Returns a list of joint IDs (len = end_dim-start_dim).
+    """
+    phys = env.mojo.physics
+    m = phys.model.ptr
+
+    lows = np.asarray(env.action_space.low, dtype=np.float64)
+    highs = np.asarray(env.action_space.high, dtype=np.float64)
+
+    # collect candidate joints with ranges
+    candidates = []
+    for jid in range(int(m.njnt)):
+        jname = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, jid) or ""
+        if not jname.startswith(prefix):
+            continue
+        jtype = int(m.jnt_type[jid])
+        if jtype not in (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE):
+            continue
+        r = m.jnt_range[jid].copy()
+        candidates.append((jid, jname, float(r[0]), float(r[1])))
+
+    mapping = []
+    used = set()
+
+    for dim in range(start_dim, end_dim):
+        lo, hi = float(lows[dim]), float(highs[dim])
+
+        # find best range match among unused joints
+        best = None
+        best_err = 1e9
+        for jid, jname, rlo, rhi in candidates:
+            if jid in used:
+                continue
+            err = abs(rlo - lo) + abs(rhi - hi)
+            if err < best_err:
+                best_err = err
+                best = (jid, jname, rlo, rhi)
+
+        if best is None or best_err > tol:
+            raise RuntimeError(
+                f"Could not reliably match action dim {dim} range [{lo},{hi}] "
+                f"to any {prefix} hinge/slide joint range (best_err={best_err})."
+            )
+
+        jid, jname, rlo, rhi = best
+        used.add(jid)
+        mapping.append(jid)
+
+    # helpful print
+    print("[ACTION→JOINT MAP]")
+    for k, jid in enumerate(mapping):
+        dim = start_dim + k
+        jname = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, jid) or ""
+        rlo, rhi = m.jnt_range[jid]
+        print(f"  dim {dim:2d} -> {jname:40s}  range=[{rlo:.4f},{rhi:.4f}]")
+
+    return mapping
 
 def set_margins_for_sets(physics, gids, margin=0.06):
     m = physics.model.ptr
