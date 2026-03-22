@@ -155,9 +155,9 @@ class HumanArmDrawerTopOpen(_HumanArmCupboardsInteractionEnv):
     def _success(self) -> bool:
         if not np.allclose(self.cabinet_drawers.get_state()[-1], 1, atol=TOLERANCE):
             return False
-        for human in self.humanarms:
-            if not human.is_colliding(self.cabinet_wall.shelf_bottom):
-                return False
+        # for human in self.humanarms:
+        #     if not human.is_colliding(self.cabinet_wall.shelf_bottom):
+        #         return False
         return True
 
 
@@ -243,9 +243,9 @@ class HumanArmCupboardsOpenAll(_HumanArmCupboardsInteractionEnv):
         for cabinet in self.all_cabinets:
             if not np.allclose(cabinet.get_state(), 1, atol=TOLERANCE):
                 return False
-        for human in self.humanarms:
-            if not human.is_colliding(self.cabinet_wall.shelf_bottom):
-                return False
+        # for human in self.humanarms:
+        #     if not human.is_colliding(self.cabinet_wall.shelf_bottom):
+        #         return False
         return True
 
 

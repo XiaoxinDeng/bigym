@@ -1,6 +1,54 @@
 
 import mujoco
 import numpy as np
+import csv
+import json
+from pathlib import Path
+
+
+def read_manifest_csv(path):
+    path = Path(path)
+    records = []
+    with path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            row["num_timesteps"] = int(row["num_timesteps"])
+            row["num_replayed_steps"] = int(row["num_replayed_steps"])
+            row["success"] = int(row["success"])
+            row["terminated"] = int(row["terminated"])
+            row["truncated"] = int(row["truncated"])
+            row["final_drawer_state"] = (
+                None if row["final_drawer_state"] in ("", "None")
+                else float(row["final_drawer_state"])
+            )
+            records.append(row)
+    return records
+
+
+def read_manifest_json(path):
+    path = Path(path)
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def summarize_manifest(records):
+    total = len(records)
+    successful = [r for r in records if int(r["success"]) == 1]
+    failed = [r for r in records if int(r["success"]) == 0]
+    exceptions = [r for r in records if r.get("exception") not in ("", None)]
+
+    print(f"Total demos: {total}")
+    print(f"Successful demos: {len(successful)}")
+    print(f"Failed demos: {len(failed)}")
+    print(f"Demos with exceptions: {len(exceptions)}")
+
+    print("\nSuccessful demo files:")
+    for r in successful:
+        print(r["full_path"])
+
+
+def get_successful_demo_paths(records):
+    return [r["full_path"] for r in records if int(r["success"]) == 1]
 
 def make_state_buffer(physics):
     m = physics.model.ptr
@@ -38,60 +86,47 @@ def disable_arm_collisions(physics):
         # optional: zero margin so it doesn't generate margin contacts either
         m.geom_margin[gid] = 0.0
 
+def safe_step_pred(env_pred, action):
+    try:
+        ts = env_pred.step(action)
+    except Exception:
+        return None, False, "exception"
+
+    # 兼容不同 timestep 返回类型
+    terminated = False
+    truncated = False
+    info = {}
+
+    try:
+        terminated = bool(getattr(ts, "terminated", False))
+        truncated = bool(getattr(ts, "truncated", False))
+        info = getattr(ts, "info", {}) or {}
+    except Exception:
+        pass
+
+    unstable = terminated or truncated or bool(info.get("physics_error", False))
+    if unstable:
+        return ts, False, "unstable"
+
+    return ts, True, "ok"
+
 def copy_state(env_src, env_dst, buf):
     _snapshot(env_src.mojo.physics, buf)
     _restore(env_dst.mojo.physics, buf)
 
-    # Human script state
     hs = env_src.humanarms[0]
     hd = env_dst.humanarms[0]
+    hd.import_internal_state(hs.export_internal_state())
 
-    # ---- core time/control ----
-    hd._CURRENT_TIME = hs._CURRENT_TIME
-    hd._mode = hs._mode
-    hd._qpos_target[:] = hs._qpos_target
-    hd._ctrl_target[:] = hs._ctrl_target
-
-    # ---- walking state (OU) ----
-    if getattr(hs, "_walk_center_xy", None) is not None:
-        hd._walk_center_xy = hs._walk_center_xy.copy()
-    if getattr(hs, "_walk_xy", None) is not None:
-        hd._walk_xy = hs._walk_xy.copy()
-    if getattr(hs, "_walk_v", None) is not None:
-        hd._walk_v = hs._walk_v.copy()
-
-    # ---- joint smoothing ----
-    if getattr(hs, "_qpos_filt", None) is not None:
-        hd._qpos_filt = hs._qpos_filt.copy()
-
-    # ---- noise state ----
-    hd._next_resample_t = hs._next_resample_t
-    if getattr(hs, "_noise_freqs", None) is not None:
-        hd._noise_freqs = hs._noise_freqs.copy()
-    if getattr(hs, "_noise_phases", None) is not None:
-        hd._noise_phases = hs._noise_phases.copy()
-    if getattr(hs, "_noise_amps", None) is not None:
-        hd._noise_amps = hs._noise_amps.copy()
-
-    # If you use blend variables:
-    if getattr(hs, "_noise_old", None) is not None:
-        hd._noise_old = tuple(x.copy() for x in hs._noise_old)
-    if getattr(hs, "_noise_new", None) is not None:
-        hd._noise_new = tuple(x.copy() for x in hs._noise_new)
-    hd._noise_blend_t0 = getattr(hs, "_noise_blend_t0", 0.0)
-
-    # ---- RNG state (critical for OU) ----
-    if getattr(hs, "_rng", None) is not None:
-        if getattr(hd, "_rng", None) is None:
-            hd._rng = np.random.default_rng()
-        hd._rng.bit_generator.state = hs._rng.bit_generator.state
-
-    # Floating-base controller buffers (BiGym-specific)
     fbs = env_src.robot.floating_base
     fbd = env_dst.robot.floating_base
     if fbs is not None and fbd is not None:
-        fbd._accumulated_actions[:] = fbs._accumulated_actions
-        fbd._last_action[:] = fbs._last_action
+        if hasattr(fbd, "_accumulated_actions") and hasattr(fbs, "_accumulated_actions"):
+            fbd._accumulated_actions[:] = fbs._accumulated_actions
+        if hasattr(fbd, "_last_action") and hasattr(fbs, "_last_action"):
+            fbd._last_action[:] = fbs._last_action
+
+    env_dst.mojo.physics.forward()
 
 def _has_penetration(physics, colliders_1, colliders_2, pen_eps=0.0):
     ids_1 = set(physics.bind([c.mjcf for c in colliders_1]).element_id)

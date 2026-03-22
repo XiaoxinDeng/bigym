@@ -29,7 +29,8 @@ class _CupboardsInteractionEnv(BiGymEnv, ABC):
             self.cabinet_door_right,
             self.cabinet_wall,
         ]
-
+    def get_dt(self):
+            return self._mojo.model.opt.timestep * self._sub_steps_count
 
 class DrawerTopOpen(_CupboardsInteractionEnv):
     """Open top drawer of the cupboard task."""
