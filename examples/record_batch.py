@@ -34,25 +34,32 @@ from demo_utils import (
 
 CLASS_NAME = "DrawerTopOpen"
 
+LABEL_MOVE = 0
+LABEL_PAUSE = 1
+LABEL_RESUME = 2
+
 # -------------------------
 # Paths
 # -------------------------
 root_dir = f"{CACHE_PATH}/demonstrations/0.9.0/"
 joint_dir = "JointPositionActionMode_floating_pelvis_x_pelvis_y_pelvis_z_pelvis_rz_absolute/lightweight/"
 target_dir = os.path.join(root_dir, CLASS_NAME, joint_dir)
-data_save_dir = os.path.join(root_dir, "HumanArm", f"HumanArm{CLASS_NAME}", joint_dir)
+data_save_dir = os.path.join(root_dir, f"HumanArm{CLASS_NAME}", joint_dir)
 video_save_dir = "demo_videos"
+label_save_dir = os.path.join(data_save_dir, "mode_labels")
 result_manifest_path = os.path.join(data_save_dir, "batch_result_manifest.json")
 
 os.makedirs(data_save_dir, exist_ok=True)
 os.makedirs(video_save_dir, exist_ok=True)
+os.makedirs(label_save_dir, exist_ok=True)
 
 # -------------------------
 # Replay settings
 # -------------------------
 n_demo_steps = None
 write_demo_video = True
-save_demo_to_disk = False
+save_demo_to_disk = True
+save_mode_labels = True
 control_frequency = 50
 fps = 30
 frame_dt = 1.0 / fps
@@ -68,6 +75,7 @@ PRED_EVERY_NEAR = 1
 LOOKAHEAD_H = 5
 
 PRINT_DEBUG_MSG = False
+
 # -------------------------
 # Observation config
 # -------------------------
@@ -81,6 +89,16 @@ observation_config = ObservationConfig(
     proprioception=True,
     privileged_information=True,
 )
+
+
+def label_to_name(label: int) -> str:
+    if label == LABEL_MOVE:
+        return "MOVE"
+    if label == LABEL_PAUSE:
+        return "PAUSE"
+    if label == LABEL_RESUME:
+        return "RESUME"
+    return "UNKNOWN"
 
 
 def make_env():
@@ -152,11 +170,20 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
     video_filename = os.path.join(
         video_save_dir, f"human_cupboard_{CLASS_NAME}_demo_{demo.uuid}.mp4"
     )
+
     writer = imageio.get_writer(video_filename, fps=fps) if write_demo_video else None
 
     recorder = DemoRecorder(data_save_dir)
     if save_demo_to_disk:
         recorder.record(env, lightweight_demo=True)
+        target_demo_uuid = str(recorder.demo.uuid)
+    else:
+        target_demo_uuid = str(demo.uuid)  # fallback if not saving overlay demo
+
+    target_demo_path = None
+    label_filename = os.path.join(label_save_dir, f"{target_demo_uuid}_mode_labels.npz")
+    label_meta_filename = os.path.join(label_save_dir, f"{target_demo_uuid}_mode_labels.json")
+
 
     # -------------------------
     # Prediction helpers
@@ -181,6 +208,8 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
     tqdm.write(f"action_dim: {env.action_space.shape[0]}")
     tqdm.write(f"action_mode type: {type(env.action_mode)}")
     tqdm.write(f"Save video to: {video_filename}")
+    if save_mode_labels:
+        tqdm.write(f"Save labels to: {label_filename}")
 
     pbar = tqdm(
         total=replay_steps,
@@ -190,6 +219,18 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
         leave=False,
         dynamic_ncols=True,
     )
+
+    # -------------------------
+    # Mode-label buffers
+    # One record per real env.step(...)
+    # -------------------------
+    mode_labels = []
+    mode_names = []
+    pause_flags = []
+    demo_indices = []
+    proposed_actions = []
+    executed_actions = []
+    success_flags = []
 
     exception_msg = None
 
@@ -242,10 +283,11 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
                             m_pred, mujoco.mjtObj.mjOBJ_GEOM, int(cg2)
                         ) or ""
 
-                    if PRINT_DEBUG_MSG: tqdm.write(
-                        f"[PAUSE] step_t={step_t} c_hit={c_hit} "
-                        f"cdist={cdist:.4f} {name1} <-> {name2}"
-                    )
+                    if PRINT_DEBUG_MSG:
+                        tqdm.write(
+                            f"[PAUSE] step_t={step_t} c_hit={c_hit} "
+                            f"cdist={cdist:.4f} {name1} <-> {name2}"
+                        )
 
                 elif paused:
                     safe_count = safe_count + 1 if resume_clear else 0
@@ -278,12 +320,15 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
                             paused = False
                             safe_count = 0
                             pause_steps = 0
-                            if PRINT_DEBUG_MSG: tqdm.write(f"[RESUME] step_t={step_t} cdist={cdist:.4f}")
+                            if PRINT_DEBUG_MSG:
+                                tqdm.write(f"[RESUME] step_t={step_t} cdist={cdist:.4f}")
                         else:
                             safe_count = 0
 
-            # ---------- Choose real action ----------
+            # ---------- Choose real action + mode label ----------
             if paused:
+                current_mode = LABEL_PAUSE
+
                 if cg1 != -1:
                     hl.highlight_pred_contact_pair(
                         cg1, cg2, rgba=(1, 0, 0, 1), highlight_body_visual=True
@@ -308,9 +353,12 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
                 hl.clear()
 
                 if prev_paused:
+                    current_mode = LABEL_RESUME
                     ramp_k = 0
                     if resume_from_action is None:
                         resume_from_action = last_safe_action.copy()
+                else:
+                    current_mode = LABEL_MOVE
 
                 if ramp_k < RAMP_STEPS:
                     alpha = (ramp_k + 1) / RAMP_STEPS
@@ -324,10 +372,20 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
                 pause_steps = 0
                 pbar.update(1)
 
+            # ---------- Record label-aligned sidecar data BEFORE real step ----------
+            mode_labels.append(current_mode)
+            mode_names.append(label_to_name(current_mode))
+            pause_flags.append(bool(paused))
+            demo_indices.append(int(min(demo_t, replay_steps - 1)))
+            proposed_actions.append(proposed.copy())
+            executed_actions.append(action.copy())
+
             # ---------- Step real env ----------
             action = clamp_action(env, action)
             output_timestep = env.step(action)
             success = bool(env.success)
+            success_flags.append(success)
+
             tqdm.write(f"Task Success: {str(success)}")
 
             if save_demo_to_disk:
@@ -336,16 +394,16 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
             arm_dbg = env.humanarms[0].get_debug_keepout_state()
             if PRINT_DEBUG_MSG and (step_t % 10 == 0) and (arm_dbg["active"] or paused):
                 tqdm.write(
-                    f"[DBG] step_t={step_t} paused={paused} zone={arm_dbg['zone']} "
-                    f"clear={arm_dbg['clear']:.4f} active={arm_dbg['active']} "
-                    f"push={arm_dbg['push']:.4f} "
+                    f"[DBG] step_t={step_t} paused={paused} mode={label_to_name(current_mode)} "
+                    f"zone={arm_dbg['zone']} clear={arm_dbg['clear']:.4f} "
+                    f"active={arm_dbg['active']} push={arm_dbg['push']:.4f} "
                     f"nxy=({arm_dbg['nxy'][0]:.3f},{arm_dbg['nxy'][1]:.3f}) "
                     f"shadow_cdist={cdist:.4f}"
                 )
 
             step_t += 1
             prev_paused = paused
-            pbar.set_postfix(paused=paused, ttc=ttc)
+            pbar.set_postfix(paused=paused, mode=label_to_name(current_mode), ttc=ttc)
 
             sim_t += env.get_dt()
             if sim_t >= next_frame_t and write_demo_video:
@@ -362,22 +420,65 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
     finally:
         pbar.close()
         if save_demo_to_disk:
-            recorder.save_demo()
+            target_demo_path = recorder.save_demo()
             recorder.stop()
         if writer is not None:
             writer.close()
 
     final_drawer_state = env.cabinet_drawers.get_state()[-1]
-    tqdm.write(f"success: {str(success)}| Final Drawer State: {final_drawer_state}\n")
+    tqdm.write(f"success: {str(success)} | Final Drawer State: {final_drawer_state}\n")
+
+    # -------------------------
+    # Save mode labels sidecar
+    # -------------------------
+    if save_mode_labels:
+        np.savez_compressed(
+            label_filename,
+            target_demo_uuid=str(target_demo_uuid),
+            mode_labels=np.asarray(mode_labels, dtype=np.int64),
+            pause_flags=np.asarray(pause_flags, dtype=np.bool_),
+            demo_indices=np.asarray(demo_indices, dtype=np.int64),
+            proposed_actions=np.asarray(proposed_actions, dtype=np.float32),
+            executed_actions=np.asarray(executed_actions, dtype=np.float32),
+            success_flags=np.asarray(success_flags, dtype=np.bool_),
+            label_map=np.asarray(["MOVE", "PAUSE", "RESUME"], dtype=object),
+        )
+
+        with open(label_meta_filename, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "source_demo_uuid": str(demo.uuid),
+                    "target_demo_uuid": str(target_demo_uuid),
+                    "class_name": CLASS_NAME,
+                    "n_steps_recorded": len(mode_labels),
+                    "label_map": {
+                        "0": "MOVE",
+                        "1": "PAUSE",
+                        "2": "RESUME",
+                    },
+                    "pause_dist": PAUSE_DIST,
+                    "resume_dist": RESUME_DIST,
+                    "resume_dwell": RESUME_DWELL,
+                    "ramp_steps": RAMP_STEPS,
+                    "control_frequency": control_frequency,
+                },
+                f,
+                indent=2,
+            )
 
     return {
-        "uuid": demo.uuid,
+        "uuid": str(target_demo_uuid),
+        "source_uuid": str(demo.uuid),
         "source_path": filename,
+        "target_path": str(target_demo_path) if target_demo_path is not None else None ,
         "video_path": video_filename if write_demo_video else None,
+        "mode_label_path": label_filename if save_mode_labels else None,
+        "mode_label_meta_path": label_meta_filename if save_mode_labels else None,
         "success": int(success),
         "final_drawer_state": float(final_drawer_state),
         "replay_steps": int(replay_steps),
         "executed_env_steps": int(step_t),
+        "num_mode_labels": int(len(mode_labels)),
         "exception": exception_msg,
     }
 
@@ -400,22 +501,24 @@ def main():
 
     results = []
     outer_pbar = tqdm(
-            total=len(filenames),
-            desc="Batch demos",
-            position=0,
-            dynamic_ncols=True,
-        )
+        total=len(filenames),
+        desc="Batch demos",
+        position=0,
+        dynamic_ncols=True,
+    )
 
     try:
         for i, filename in enumerate(filenames):
             outer_pbar.set_postfix_str(os.path.basename(filename))
             tqdm.write(f"\n[{i + 1}/{len(filenames)}] Processing: {filename}")
-            result = run_one_demo(filename, env, env_pred)
+            result = run_one_demo(filename, env, env_pred, demo_index=i, num_demos=len(filenames))
             results.append(result)
 
             with open(result_manifest_path, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2)
+
             outer_pbar.update(1)
+
         outer_pbar.close()
 
     finally:

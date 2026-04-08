@@ -246,12 +246,24 @@ class BiGymEnv(gym.Env):
         return cameras_map
 
     def _close_renderers(self):
-        if self.mujoco_renderer is not None:
-            self.mujoco_renderer.close()
-        for renderer in self.obs_renderers.values():
-            renderer.close()
+        renderer = self.mujoco_renderer
         self.mujoco_renderer = None
+
+        obs_renderers = list(self.obs_renderers.values())
         self.obs_renderers.clear()
+
+        if renderer is not None:
+            try:
+                renderer.close()
+            except Exception as e:
+                print(f"warning: failed to close mujoco_renderer: {e}")
+
+        for i, renderer in enumerate(obs_renderers):
+            if renderer is not None:
+                try:
+                    renderer.close()
+                except Exception as e:
+                    print(f"warning: failed to close obs_renderer[{i}]: {e}")
 
     def _initialize_env(self):
         """Can be overwritten to add task specific items to scene."""
@@ -502,5 +514,7 @@ class BiGymEnv(gym.Env):
         return float(self.success) * SPARSE_REWARD_FACTOR
 
     def close(self):
-        """Close environment."""
+        if getattr(self, "_closed", False):
+            return
+        self._closed = True
         self._close_renderers()
