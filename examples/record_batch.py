@@ -398,16 +398,19 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
             action = clamp_action(env, action)
             output_timestep = env.step(action)
             success = bool(env.success)
+            obs, reward, terminated, truncated, info = output_timestep
 
             # Attach aligned label to the timestep being saved.
             # This makes timestep[i] and mode_label[i] refer to the same executed transition.
-            if output_timestep.info is None:
-                output_timestep.info = {}
+            if info is None:
+                info = {}
 
-            output_timestep.info["mode_label"] = int(current_mode)
-            output_timestep.info["mode_name"] = label_to_name(current_mode)
-            output_timestep.info["paused"] = bool(paused)
-            output_timestep.info["source_demo_idx"] = int(min(label_demo_idx, replay_steps - 1))
+            info["mode_label"] = int(current_mode)
+            info["mode_name"] = label_to_name(current_mode)
+            info["paused"] = bool(paused)
+            info["source_demo_idx"] = int(min(label_demo_idx, replay_steps - 1))
+
+            output_timestep = (obs, reward, terminated, truncated, info)
 
             # ---------- Record raw per-env-step traces ----------
             raw_mode_labels.append(int(current_mode))
