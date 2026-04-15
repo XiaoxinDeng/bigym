@@ -402,13 +402,24 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
 
             # Attach aligned label to the timestep being saved.
             # This makes timestep[i] and mode_label[i] refer to the same executed transition.
-            if info is None:
-                info = {}
+            if info is None: info = {}
+            if reward is None:
+                raise RuntimeError(
+                    f"Reward is None at step_t={step_t}, demo_t={demo_t}, "
+                    f"demo_uuid={demo.uuid}, terminated={terminated}, truncated={truncated}, info={info}"
+                )
+            
+            if step_t < 5 or reward is None:
+                tqdm.write(
+                    f"[STEP] step_t={step_t} reward={reward} terminated={terminated} "
+                    f"truncated={truncated} success={env.success}"
+                )
 
             info["mode_label"] = int(current_mode)
             info["mode_name"] = label_to_name(current_mode)
             info["paused"] = bool(paused)
             info["source_demo_idx"] = int(min(label_demo_idx, replay_steps - 1))
+            info["success"] = success
 
             output_timestep = (obs, reward, terminated, truncated, info)
 
