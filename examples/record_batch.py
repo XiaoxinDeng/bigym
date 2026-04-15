@@ -29,6 +29,7 @@ from demo_utils import (
     set_margins_for_sets,
     make_pause_hold_action_hybrid,
     zero_floating_base_velocity,
+    summarize_manifest
 )
 
 
@@ -46,12 +47,13 @@ joint_dir = "JointPositionActionMode_floating_pelvis_x_pelvis_y_pelvis_z_pelvis_
 target_dir = os.path.join(root_dir, CLASS_NAME, joint_dir)
 data_save_dir = os.path.join(root_dir, f"HumanArm{CLASS_NAME}", joint_dir)
 video_save_dir = "demo_videos"
-label_save_dir = os.path.join(data_save_dir, "mode_labels")
+# label_save_dir = os.path.join(data_save_dir, "mode_labels ")
+# save_mode_labels = False
 result_manifest_path = os.path.join(data_save_dir, "batch_result_manifest.json")
 
 os.makedirs(data_save_dir, exist_ok=True)
 os.makedirs(video_save_dir, exist_ok=True)
-os.makedirs(label_save_dir, exist_ok=True)
+# os.makedirs(label_save_dir, exist_ok=True)
 
 # -------------------------
 # Replay settings
@@ -59,7 +61,7 @@ os.makedirs(label_save_dir, exist_ok=True)
 n_demo_steps = None
 write_demo_video = True
 save_demo_to_disk = True
-save_mode_labels = True
+# save_raw_mode_labels  = True
 control_frequency = 50
 fps = 30
 frame_dt = 1.0 / fps
@@ -90,6 +92,25 @@ observation_config = ObservationConfig(
     privileged_information=True,
 )
 
+def collapse_raw_labels_to_demo_steps(raw_mode_labels, raw_demo_indices, replay_steps):
+    per_step_labels = np.full(replay_steps, LABEL_MOVE, dtype=np.int64)
+
+    # priority: PAUSE > RESUME > MOVE
+    for step_idx in range(replay_steps):
+        labs = [
+            lab for lab, idx in zip(raw_mode_labels, raw_demo_indices)
+            if idx == step_idx
+        ]
+        if len(labs) == 0:
+            per_step_labels[step_idx] = LABEL_MOVE
+        elif LABEL_PAUSE in labs:
+            per_step_labels[step_idx] = LABEL_PAUSE
+        elif LABEL_RESUME in labs:
+            per_step_labels[step_idx] = LABEL_RESUME
+        else:
+            per_step_labels[step_idx] = LABEL_MOVE
+
+    return per_step_labels
 
 def label_to_name(label: int) -> str:
     if label == LABEL_MOVE:
@@ -178,12 +199,9 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
         recorder.record(env, lightweight_demo=True)
         target_demo_uuid = str(recorder.demo.uuid)
     else:
-        target_demo_uuid = str(demo.uuid)  # fallback if not saving overlay demo
+        target_demo_uuid = str(demo.uuid)
 
     target_demo_path = None
-    label_filename = os.path.join(label_save_dir, f"{target_demo_uuid}_mode_labels.npz")
-    label_meta_filename = os.path.join(label_save_dir, f"{target_demo_uuid}_mode_labels.json")
-
 
     # -------------------------
     # Prediction helpers
@@ -208,8 +226,6 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
     tqdm.write(f"action_dim: {env.action_space.shape[0]}")
     tqdm.write(f"action_mode type: {type(env.action_mode)}")
     tqdm.write(f"Save video to: {video_filename}")
-    if save_mode_labels:
-        tqdm.write(f"Save labels to: {label_filename}")
 
     pbar = tqdm(
         total=replay_steps,
@@ -221,16 +237,16 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
     )
 
     # -------------------------
-    # Mode-label buffers
-    # One record per real env.step(...)
+    # Raw per-env-step traces
+    # These are aligned with the RECORDED target demo timesteps.
     # -------------------------
-    mode_labels = []
-    mode_names = []
-    pause_flags = []
-    demo_indices = []
-    proposed_actions = []
-    executed_actions = []
-    success_flags = []
+    raw_mode_labels = []
+    raw_mode_names = []
+    raw_pause_flags = []
+    raw_demo_indices = []
+    raw_proposed_actions = []
+    raw_executed_actions = []
+    raw_success_flags = []
 
     exception_msg = None
 
@@ -239,6 +255,10 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
             timestep = demo.timesteps[demo_t]
             proposed = timestep.executed_action.copy()
             ttc = None
+
+            # Source-demo index currently being replayed.
+            # Kept only for debugging / provenance.
+            label_demo_idx = demo_t
 
             # ---------- Collision check / pause-resume logic ----------
             pred_every = PRED_EVERY_NEAR if paused else PRED_EVERY_FAR
@@ -334,7 +354,9 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
                         cg1, cg2, rgba=(1, 0, 0, 1), highlight_body_visual=True
                     )
 
-                action = make_pause_hold_action_hybrid(env, action_joint_jids, last_safe_action)
+                action = make_pause_hold_action_hybrid(
+                    env, action_joint_jids, last_safe_action
+                )
                 zero_floating_base_velocity(env)
                 last_safe_action = action.copy()
                 pause_steps += 1
@@ -372,21 +394,29 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
                 pause_steps = 0
                 pbar.update(1)
 
-            # ---------- Record label-aligned sidecar data BEFORE real step ----------
-            mode_labels.append(current_mode)
-            mode_names.append(label_to_name(current_mode))
-            pause_flags.append(bool(paused))
-            demo_indices.append(int(min(demo_t, replay_steps - 1)))
-            proposed_actions.append(proposed.copy())
-            executed_actions.append(action.copy())
-
             # ---------- Step real env ----------
             action = clamp_action(env, action)
             output_timestep = env.step(action)
             success = bool(env.success)
-            success_flags.append(success)
 
-            tqdm.write(f"Task Success: {str(success)}")
+            # Attach aligned label to the timestep being saved.
+            # This makes timestep[i] and mode_label[i] refer to the same executed transition.
+            if output_timestep.info is None:
+                output_timestep.info = {}
+
+            output_timestep.info["mode_label"] = int(current_mode)
+            output_timestep.info["mode_name"] = label_to_name(current_mode)
+            output_timestep.info["paused"] = bool(paused)
+            output_timestep.info["source_demo_idx"] = int(min(label_demo_idx, replay_steps - 1))
+
+            # ---------- Record raw per-env-step traces ----------
+            raw_mode_labels.append(int(current_mode))
+            raw_mode_names.append(label_to_name(current_mode))
+            raw_pause_flags.append(bool(paused))
+            raw_demo_indices.append(int(min(label_demo_idx, replay_steps - 1)))
+            raw_proposed_actions.append(proposed.copy())
+            raw_executed_actions.append(action.copy())
+            raw_success_flags.append(success)
 
             if save_demo_to_disk:
                 recorder.add_timestep(output_timestep, action)
@@ -403,7 +433,12 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
 
             step_t += 1
             prev_paused = paused
-            pbar.set_postfix(paused=paused, mode=label_to_name(current_mode), ttc=ttc)
+            pbar.set_postfix(
+                paused=paused,
+                mode=label_to_name(current_mode),
+                success=success,
+                ttc=ttc,
+            )
 
             sim_t += env.get_dt()
             if sim_t >= next_frame_t and write_demo_video:
@@ -429,60 +464,30 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
     tqdm.write(f"success: {str(success)} | Final Drawer State: {final_drawer_state}\n")
 
     # -------------------------
-    # Save mode labels sidecar
+    # Debug-only collapsed labels in source-demo index space
+    # Not for training alignment.
     # -------------------------
-    if save_mode_labels:
-        np.savez_compressed(
-            label_filename,
-            target_demo_uuid=str(target_demo_uuid),
-            mode_labels=np.asarray(mode_labels, dtype=np.int64),
-            pause_flags=np.asarray(pause_flags, dtype=np.bool_),
-            demo_indices=np.asarray(demo_indices, dtype=np.int64),
-            proposed_actions=np.asarray(proposed_actions, dtype=np.float32),
-            executed_actions=np.asarray(executed_actions, dtype=np.float32),
-            success_flags=np.asarray(success_flags, dtype=np.bool_),
-            label_map=np.asarray(["MOVE", "PAUSE", "RESUME"], dtype=object),
-        )
+    collapsed_mode_labels = collapse_raw_labels_to_demo_steps(
+        raw_mode_labels=raw_mode_labels,
+        raw_demo_indices=raw_demo_indices,
+        replay_steps=replay_steps,
+    )
 
-        with open(label_meta_filename, "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "source_demo_uuid": str(demo.uuid),
-                    "target_demo_uuid": str(target_demo_uuid),
-                    "class_name": CLASS_NAME,
-                    "n_steps_recorded": len(mode_labels),
-                    "label_map": {
-                        "0": "MOVE",
-                        "1": "PAUSE",
-                        "2": "RESUME",
-                    },
-                    "pause_dist": PAUSE_DIST,
-                    "resume_dist": RESUME_DIST,
-                    "resume_dwell": RESUME_DWELL,
-                    "ramp_steps": RAMP_STEPS,
-                    "control_frequency": control_frequency,
-                },
-                f,
-                indent=2,
-            )
 
     return {
         "uuid": str(target_demo_uuid),
         "source_uuid": str(demo.uuid),
         "source_path": filename,
-        "target_path": str(target_demo_path) if target_demo_path is not None else None ,
+        "target_path": str(target_demo_path) if target_demo_path is not None else None,
         "video_path": video_filename if write_demo_video else None,
-        "mode_label_path": label_filename if save_mode_labels else None,
-        "mode_label_meta_path": label_meta_filename if save_mode_labels else None,
         "success": int(success),
         "final_drawer_state": float(final_drawer_state),
         "replay_steps": int(replay_steps),
         "executed_env_steps": int(step_t),
-        "num_mode_labels": int(len(mode_labels)),
+        "num_mode_labels": int(len(raw_mode_labels)),
+        "num_collapsed_mode_labels": int(len(collapsed_mode_labels)),
         "exception": exception_msg,
     }
-
-
 def main():
     demo_store = DemoStore()
     demo_store.pull_demos()
