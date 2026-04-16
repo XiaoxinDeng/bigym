@@ -33,35 +33,20 @@ from demo_utils import (
 )
 
 
-CLASS_NAME = "DrawerTopOpen"
+BASE_CLASS_NAME = "DrawerTopOpen"
 
 LABEL_MOVE = 0
 LABEL_PAUSE = 1
 LABEL_RESUME = 2
-
-# -------------------------
-# Paths
-# -------------------------
-root_dir = f"{CACHE_PATH}/demonstrations/0.9.0/"
-joint_dir = "JointPositionActionMode_floating_pelvis_x_pelvis_y_pelvis_z_pelvis_rz_absolute/lightweight/"
-target_dir = os.path.join(root_dir, CLASS_NAME, joint_dir)
-data_save_dir = os.path.join(root_dir, f"HumanArm{CLASS_NAME}", joint_dir)
-video_save_dir = "demo_videos"
-# label_save_dir = os.path.join(data_save_dir, "mode_labels ")
-# save_mode_labels = False
-result_manifest_path = os.path.join(data_save_dir, "batch_result_manifest.json")
-
-os.makedirs(data_save_dir, exist_ok=True)
-os.makedirs(video_save_dir, exist_ok=True)
-# os.makedirs(label_save_dir, exist_ok=True)
+SAVE_DEMO_VIDEO_TO_DIST = False
+SAVE_DEMO_TO_DIST = True
+USE_LIGHTWEIGHT_DEMO = False
+PRINT_DEBUG_MSG = False
 
 # -------------------------
 # Replay settings
 # -------------------------
 n_demo_steps = None
-write_demo_video = True
-save_demo_to_disk = True
-# save_raw_mode_labels  = True
 control_frequency = 50
 fps = 30
 frame_dt = 1.0 / fps
@@ -76,7 +61,22 @@ PRED_EVERY_FAR = 3
 PRED_EVERY_NEAR = 1
 LOOKAHEAD_H = 5
 
-PRINT_DEBUG_MSG = False
+# -------------------------
+# Paths
+# -------------------------
+root_dir = f"{CACHE_PATH}/demonstrations/0.9.0/"
+joint_dir = "JointPositionActionMode_floating_pelvis_x_pelvis_y_pelvis_z_pelvis_rz_absolute/" 
+target_dir = os.path.join(root_dir, BASE_CLASS_NAME, joint_dir + "lightweight/")
+data_save_dir = os.path.join(root_dir, f"HumanArm{BASE_CLASS_NAME}", joint_dir + ("lightweight/" if USE_LIGHTWEIGHT_DEMO else "full/"))
+video_save_dir = "demo_videos"
+result_manifest_path = os.path.join(data_save_dir, "manifest.json")
+
+if SAVE_DEMO_TO_DIST:
+    os.makedirs(data_save_dir, exist_ok=True)
+if SAVE_DEMO_VIDEO_TO_DIST:
+    os.makedirs(video_save_dir, exist_ok=True)
+
+
 
 # -------------------------
 # Observation config
@@ -189,14 +189,14 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
     # Writer / recorder
     # -------------------------
     video_filename = os.path.join(
-        video_save_dir, f"human_cupboard_{CLASS_NAME}_demo_{demo.uuid}.mp4"
+        video_save_dir, f"human_cupboard_{BASE_CLASS_NAME}_demo_{demo.uuid}.mp4"
     )
 
-    writer = imageio.get_writer(video_filename, fps=fps) if write_demo_video else None
+    writer = imageio.get_writer(video_filename, fps=fps) if SAVE_DEMO_VIDEO_TO_DIST else None
 
     recorder = DemoRecorder(data_save_dir)
-    if save_demo_to_disk:
-        recorder.record(env, lightweight_demo=True)
+    if SAVE_DEMO_TO_DIST:
+        recorder.record(env, lightweight_demo=USE_LIGHTWEIGHT_DEMO)
         target_demo_uuid = str(recorder.demo.uuid)
     else:
         target_demo_uuid = str(demo.uuid)
@@ -225,7 +225,8 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
     tqdm.write(f"Source: {filename}")
     tqdm.write(f"action_dim: {env.action_space.shape[0]}")
     tqdm.write(f"action_mode type: {type(env.action_mode)}")
-    tqdm.write(f"Save video to: {video_filename}")
+    if SAVE_DEMO_VIDEO_TO_DIST:
+        tqdm.write(f"Save video to: {video_filename}")
 
     pbar = tqdm(
         total=replay_steps,
@@ -406,7 +407,6 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
                 info = {}
 
             info["mode_label"] = int(current_mode)
-            info["mode_name"] = label_to_name(current_mode)
             info["paused"] = bool(paused)
             info["source_demo_idx"] = int(min(label_demo_idx, replay_steps - 1))
 
@@ -421,7 +421,7 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
             raw_executed_actions.append(action.copy())
             raw_success_flags.append(success)
 
-            if save_demo_to_disk:
+            if SAVE_DEMO_TO_DIST:
                 recorder.add_timestep(output_timestep, action)
 
             arm_dbg = env.humanarms[0].get_debug_keepout_state()
@@ -444,7 +444,7 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
             )
 
             sim_t += env.get_dt()
-            if sim_t >= next_frame_t and write_demo_video:
+            if sim_t >= next_frame_t and SAVE_DEMO_VIDEO_TO_DIST:
                 frame = env.render()
                 if frame is None:
                     raise RuntimeError("env.render() returned None; use direct MuJoCo rendering.")
@@ -457,7 +457,7 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
 
     finally:
         pbar.close()
-        if save_demo_to_disk:
+        if SAVE_DEMO_TO_DIST:
             target_demo_path = recorder.save_demo()
             recorder.stop()
         if writer is not None:
@@ -482,7 +482,7 @@ def run_one_demo(filename, env, env_pred, demo_index=0, num_demos=1):
         "source_uuid": str(demo.uuid),
         "source_path": filename,
         "target_path": str(target_demo_path) if target_demo_path is not None else None,
-        "video_path": video_filename if write_demo_video else None,
+        "video_path": video_filename if SAVE_DEMO_VIDEO_TO_DIST else None,
         "success": int(success),
         "final_drawer_state": float(final_drawer_state),
         "replay_steps": int(replay_steps),
