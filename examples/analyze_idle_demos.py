@@ -12,65 +12,19 @@ def find_first_success_demo(manifest_path: Path):
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
 
-    # BiGym manifest 常见结构：
-    # [
-    #   {"file": "...", "success": true, ...},
-    #   ...
-    # ]
-
-    if isinstance(manifest, dict) and "demos" in manifest:
-        demos = manifest["demos"]
-    else:
-        demos = manifest
+    demos = manifest["demos"] if isinstance(manifest, dict) and "demos" in manifest else manifest
 
     for item in demos:
         success = item.get("success") or item.get("is_success") or item.get("task_success")
         if success:
             return item
-
     raise RuntimeError("No successful demo found in manifest.")
 
 
-def load_actions(path: Path):
-    data = load_file(str(path))
-    keys = list(data.keys())
-
-    action_key = None
-    for k in ["action", "actions", "demo_action"]:
-        if k in data:
-            action_key = k
-            break
-
-    if action_key is None:
-        for k in keys:
-            if "action" in k.lower() and "mode" not in k.lower():
-                action_key = k
-                break
-
-    if action_key is None:
-        raise RuntimeError(f"No action key found. Keys: {keys}")
-
-    actions = data[action_key]
-
-    # flatten to [T, A]
-    if actions.ndim == 1:
-        actions = actions[:, None]
-    elif actions.ndim >= 3:
-        actions = actions.reshape(-1, actions.shape[-1])
-
-    return actions, action_key, keys
-
-
-def analyze(actions, idle_threshold=1e-2):
-    norms = np.linalg.norm(actions, axis=-1)
-
-    idle_mask = norms < idle_threshold
-    idle_ratio = float(idle_mask.mean())
-
-    # 连续 idle 段
+def consecutive_runs(mask: np.ndarray):
     runs = []
     run = 0
-    for v in idle_mask:
+    for v in mask:
         if v:
             run += 1
         else:
@@ -79,93 +33,101 @@ def analyze(actions, idle_threshold=1e-2):
                 run = 0
     if run > 0:
         runs.append(run)
-
-    longest_run = max(runs) if runs else 0
-    mean_run = float(np.mean(runs)) if runs else 0.0
-
-    return {
-        "num_steps": int(actions.shape[0]),
-        "action_dim": int(actions.shape[1]),
-        "norm_min": float(norms.min()),
-        "norm_max": float(norms.max()),
-        "norm_mean": float(norms.mean()),
-        "norm_std": float(norms.std()),
-        "idle_ratio": idle_ratio,
-        "idle_steps": int(idle_mask.sum()),
-        "longest_idle_run": int(longest_run),
-        "mean_idle_run": mean_run,
-        "first_20_norms": norms[:20],
-    }
+    return runs
 
 
 def main():
     import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=str, required=True)
-    parser.add_argument("--idle_threshold", type=float, default=1e-2)
-
+    parser.add_argument("--delta_threshold", type=float, default=1e-3)
     args = parser.parse_args()
 
     manifest_path = Path(args.manifest)
-
-    # 1️⃣ 找到第一个 success demo
     item = find_first_success_demo(manifest_path)
 
     print("=" * 80)
     print("Selected demo from manifest:")
     print(json.dumps(item, indent=2, ensure_ascii=False))
 
-    # 2️⃣ 构建 safetensor 路径
-    file_path = item.get("target_path")
-
-    if file_path is None:
-        raise RuntimeError("Manifest item has no 'file' or 'path' field.")
-
-    demo_path = Path(file_path)
-
-    # 如果是相对路径 → 相对于 manifest
+    demo_path = Path(item.get("target_path") or item.get("file") or item.get("path"))
     if not demo_path.is_absolute():
         demo_path = manifest_path.parent / demo_path
 
     print("\nResolved demo path:")
     print(demo_path)
 
-    # 3️⃣ 加载 actions
-    actions, action_key, keys = load_actions(demo_path)
+    data = load_file(str(demo_path))
+    keys = list(data.keys())
 
     print("\nAvailable keys:")
     print(keys)
 
-    print(f"\nUsing action key: {action_key}")
-    print(f"Action shape: {actions.shape}")
+    actions = data["info_demo_action"]   # [T, A]
+    paused = data["info_paused"].reshape(-1).astype(np.int32) if "info_paused" in data else None
+    mode_label = data["info_mode_label"].reshape(-1) if "info_mode_label" in data else None
 
-    # 4️⃣ 分析
-    stats = analyze(actions, idle_threshold=args.idle_threshold)
+    if actions.ndim == 1:
+        actions = actions[:, None]
+    elif actions.ndim >= 3:
+        actions = actions.reshape(-1, actions.shape[-1])
+
+    T = actions.shape[0]
+
+    # action norm
+    action_norm = np.linalg.norm(actions, axis=-1)
+
+    # delta action
+    delta = np.linalg.norm(actions[1:] - actions[:-1], axis=-1)   # [T-1]
+    delta_with_zero = np.concatenate([[0.0], delta], axis=0)      # 对齐到 [T]
 
     print("\n" + "=" * 80)
-    print("ANALYSIS RESULT")
+    print("ACTION NORM STATS")
     print("=" * 80)
+    print(f"shape            : {actions.shape}")
+    print(f"norm min/max     : {action_norm.min():.6f} / {action_norm.max():.6f}")
+    print(f"norm mean/std    : {action_norm.mean():.6f} / {action_norm.std():.6f}")
+    print(f"first 20 norms   : {np.array2string(action_norm[:20], precision=4)}")
 
-    print(f"num_steps        : {stats['num_steps']}")
-    print(f"action_dim       : {stats['action_dim']}")
-    print(
-        f"norm stats       : min={stats['norm_min']:.6f}, "
-        f"max={stats['norm_max']:.6f}, "
-        f"mean={stats['norm_mean']:.6f}, "
-        f"std={stats['norm_std']:.6f}"
-    )
-    print(
-        f"idle ratio       : {stats['idle_ratio']:.4f} "
-        f"({stats['idle_steps']}/{stats['num_steps']})"
-    )
-    print(
-        f"idle run         : longest={stats['longest_idle_run']}, "
-        f"mean={stats['mean_idle_run']:.2f}"
-    )
-    print(
-        f"first 20 norms   : {np.array2string(stats['first_20_norms'], precision=4)}"
-    )
+    print("\n" + "=" * 80)
+    print("DELTA ACTION STATS")
+    print("=" * 80)
+    print(f"delta min/max    : {delta_with_zero.min():.6f} / {delta_with_zero.max():.6f}")
+    print(f"delta mean/std   : {delta_with_zero.mean():.6f} / {delta_with_zero.std():.6f}")
+    print(f"first 20 deltas  : {np.array2string(delta_with_zero[:20], precision=6)}")
+
+    hold_mask = delta_with_zero < args.delta_threshold
+    hold_ratio = hold_mask.mean()
+    hold_runs = consecutive_runs(hold_mask)
+    print(f"hold ratio       : {hold_ratio:.4f} (delta < {args.delta_threshold})")
+    print(f"longest hold run : {max(hold_runs) if hold_runs else 0}")
+    print(f"mean hold run    : {np.mean(hold_runs):.2f}" if hold_runs else "mean hold run    : 0.00")
+
+    if paused is not None:
+        print("\n" + "=" * 80)
+        print("PAUSE STATS")
+        print("=" * 80)
+        paused_ratio = paused.mean()
+        paused_runs = consecutive_runs(paused.astype(bool))
+        print(f"paused ratio     : {paused_ratio:.4f} ({paused.sum()}/{len(paused)})")
+        print(f"longest pause run: {max(paused_runs) if paused_runs else 0}")
+        print(f"mean pause run   : {np.mean(paused_runs):.2f}" if paused_runs else "mean pause run   : 0.00")
+
+        paused_delta = delta_with_zero[paused == 1]
+        active_delta = delta_with_zero[paused == 0]
+
+        if len(paused_delta) > 0:
+            print(f"paused delta mean/std : {paused_delta.mean():.6f} / {paused_delta.std():.6f}")
+        if len(active_delta) > 0:
+            print(f"active delta mean/std : {active_delta.mean():.6f} / {active_delta.std():.6f}")
+
+    if mode_label is not None:
+        print("\n" + "=" * 80)
+        print("MODE LABEL STATS")
+        print("=" * 80)
+        unique, counts = np.unique(mode_label, return_counts=True)
+        for u, c in zip(unique, counts):
+            print(f"mode {u}: {c} ({c / len(mode_label):.4f})")
 
 
 if __name__ == "__main__":
