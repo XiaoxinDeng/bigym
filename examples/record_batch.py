@@ -81,12 +81,13 @@ if SAVE_DEMO_VIDEO_TO_DIST:
 # -------------------------
 # Observation config
 # -------------------------
+resolution = (84, 84) # Currently only 84 by 84 is supported by the model
 observation_config = ObservationConfig(
     cameras=[
-        CameraConfig(name="right_wrist", rgb=True, depth=False, resolution=(128, 128)),
-        CameraConfig(name="left_wrist", rgb=True, depth=False, resolution=(128, 128)),
-        CameraConfig(name="head", rgb=True, depth=False, resolution=(128, 128)),
-        CameraConfig(name="external", rgb=True, depth=False, resolution=(128, 128)),
+        CameraConfig(name="right_wrist", rgb=True, depth=False, resolution=resolution),
+        CameraConfig(name="left_wrist", rgb=True, depth=False, resolution=resolution),
+        CameraConfig(name="head", rgb=True, depth=False, resolution=resolution),
+        # CameraConfig(name="external", rgb=True, depth=False, resolution=(128, 128)), # The model does not support external RGB yet
     ],
     proprioception=True,
     privileged_information=True,
