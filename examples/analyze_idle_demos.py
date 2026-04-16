@@ -117,7 +117,7 @@ def main():
     print(json.dumps(item, indent=2, ensure_ascii=False))
 
     # 2️⃣ 构建 safetensor 路径
-    file_path = item.get("file") or item.get("path")
+    file_path = item.get("target_path")
 
     if file_path is None:
         raise RuntimeError("Manifest item has no 'file' or 'path' field.")
