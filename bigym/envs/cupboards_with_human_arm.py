@@ -640,11 +640,21 @@ class _HumanArmCupboardsInteractionEnv(BiGymEnv, ABC):
         return {
             "human_arm_qpos": np.concatenate([human.get_state()['qpos'] for human in self.humanarms], dtype=np.float32),
             "human_arm_qvel": np.concatenate([human.get_state()['qvel'] for human in self.humanarms], dtype=np.float32),
+            "human_arm_carrier_qpos": np.concatenate(
+                [self._mojo.data.qpos[human._carrier_qpos_adr] for human in self.humanarms],
+                dtype=np.float32,
+            ),
+            "human_arm_carrier_qvel": np.concatenate(
+                [self._mojo.data.qvel[human._carrier_qvel_adr] for human in self.humanarms],
+                dtype=np.float32,
+            ),
         }
 
     def _get_task_privileged_obs_space(self) -> dict[str, Any]:
         num_human_qpos = sum(len(human.get_state()["qpos"]) for human in self.humanarms)
         num_human_qvel = sum(len(human.get_state()["qvel"]) for human in self.humanarms)
+        num_human_carrier_qpos = sum(len(human._carrier_qpos_adr) for human in self.humanarms)
+        num_human_carrier_qvel = sum(len(human._carrier_qvel_adr) for human in self.humanarms)
         return {
             "human_arm_qpos": spaces.Box(
                 low=-np.inf,
@@ -656,6 +666,18 @@ class _HumanArmCupboardsInteractionEnv(BiGymEnv, ABC):
                 low=-np.inf,
                 high=np.inf,
                 shape=(num_human_qvel,),
+                dtype=np.float32,
+            ),
+            "human_arm_carrier_qpos": spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(num_human_carrier_qpos,),
+                dtype=np.float32,
+            ),
+            "human_arm_carrier_qvel": spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(num_human_carrier_qvel,),
                 dtype=np.float32,
             ),
         }
