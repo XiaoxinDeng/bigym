@@ -441,6 +441,99 @@ class BiGymEnv(gym.Env):
         """Custom environment behaviour after stepping."""
         pass
 
+    def _robot_freeze_joints(self):
+        robot = getattr(self, "_robot", None)
+        if robot is None:
+            return []
+
+        joints = []
+        seen = set()
+
+        def add_joint(joint):
+            if joint is None:
+                return
+            key = id(joint)
+            if key in seen:
+                return
+            seen.add(key)
+            joints.append(joint)
+
+        floating_base = getattr(robot, "floating_base", None)
+        if floating_base is not None:
+            for actuator in getattr(floating_base, "all_actuators", []) or []:
+                add_joint(getattr(actuator, "joint", None))
+
+        for actuator in getattr(robot, "limb_actuators", []) or []:
+            add_joint(getattr(actuator, "joint", None))
+            tendon = getattr(actuator, "tendon", None)
+            for tendon_joint in getattr(tendon, "joint", []) or []:
+                add_joint(getattr(tendon_joint, "joint", None))
+
+        for gripper in (getattr(robot, "grippers", {}) or {}).values():
+            for joint in getattr(gripper, "_actuated_joints", []) or []:
+                add_joint(joint)
+
+        return joints
+
+    def _snapshot_robot_freeze_state(self):
+        physics = self._mojo.physics
+        records = []
+        for joint in self._robot_freeze_joints():
+            try:
+                bound = physics.bind(joint)
+                qacc = getattr(bound, "qacc", None)
+                records.append(
+                    (
+                        joint,
+                        np.asarray(bound.qpos).copy(),
+                        np.asarray(bound.qvel).copy(),
+                        None if qacc is None else np.asarray(qacc).copy(),
+                    )
+                )
+            except Exception:  # noqa: BLE001
+                continue
+
+        floating_base = getattr(getattr(self, "_robot", None), "floating_base", None)
+        floating_state = None
+        if floating_base is not None:
+            floating_state = []
+            for name in ("_accumulated_actions", "_last_action"):
+                value = getattr(floating_base, name, None)
+                floating_state.append((name, None if value is None else np.asarray(value).copy()))
+        return records, floating_state
+
+    def _restore_robot_freeze_state(self, snapshot):
+        if snapshot is None:
+            return 0
+        records, floating_state = snapshot
+        physics = self._mojo.physics
+        restored = 0
+        for joint, qpos, qvel, qacc in records:
+            try:
+                bound = physics.bind(joint)
+                bound.qpos = qpos
+                bound.qvel = qvel
+                if qacc is not None and hasattr(bound, "qacc"):
+                    bound.qacc = qacc
+                restored += 1
+            except Exception:  # noqa: BLE001
+                continue
+
+        floating_base = getattr(getattr(self, "_robot", None), "floating_base", None)
+        if floating_base is not None and floating_state is not None:
+            for name, value in floating_state:
+                if value is None:
+                    continue
+                target = getattr(floating_base, name, None)
+                if target is not None:
+                    try:
+                        target[...] = value
+                    except Exception:  # noqa: BLE001
+                        pass
+
+        self._mojo.physics.forward()
+        return restored
+
     def render(self):
         """Renders a frame of the simulation."""
         return self.mujoco_renderer.render(self.render_mode)
@@ -460,8 +553,18 @@ class BiGymEnv(gym.Env):
             tuple: (observation, reward, terminated, truncated, info).
         """
         self._step_cache.clean()
+        freeze_robot_state = bool(getattr(self, "_freeze_robot_state_next_step", False))
+        freeze_snapshot = (
+            self._snapshot_robot_freeze_state() if freeze_robot_state else None
+        )
         self._step_mujoco_simulation(action)
         self._on_step()
+        if freeze_snapshot is not None:
+            self._restore_robot_freeze_state(freeze_snapshot)
+            self._freeze_robot_state_last_restore_count = len(freeze_snapshot[0])
+        elif hasattr(self, "_freeze_robot_state_last_restore_count"):
+            self._freeze_robot_state_last_restore_count = 0
+        self._freeze_robot_state_next_step = False
         self._action = action
         if fast:
             return {}, 0, False, False, {}

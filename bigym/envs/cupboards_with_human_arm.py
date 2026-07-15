@@ -622,8 +622,18 @@ class _HumanArmCupboardsInteractionEnv(BiGymEnv, ABC):
             tuple: (observation, reward, terminated, truncated, info).
         """
         self._step_cache.clean()
+        freeze_robot_state = bool(getattr(self, "_freeze_robot_state_next_step", False))
+        freeze_snapshot = (
+            self._snapshot_robot_freeze_state() if freeze_robot_state else None
+        )
         self._step_mujoco_simulation(action)
         self._on_step(arm_action)
+        if freeze_snapshot is not None:
+            self._restore_robot_freeze_state(freeze_snapshot)
+            self._freeze_robot_state_last_restore_count = len(freeze_snapshot[0])
+        elif hasattr(self, "_freeze_robot_state_last_restore_count"):
+            self._freeze_robot_state_last_restore_count = 0
+        self._freeze_robot_state_next_step = False
         self._action = action
         if fast:
             return {}, 0, False, False, {}
